@@ -1,0 +1,140 @@
+---
+title: "SEEP Analysis"
+author: "John Kamau"
+date: "22/09/2019"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,fig.width = 10,fig.height = 7)
+options(scipen=999)
+```
+
+```{r}
+library("readxl")
+library(tidyverse)
+library(data.table)
+uganda<- read_excel("D:/Kamau Lift/SEEP/Corrections/SGELI_LT-Outcomes_DATA.MASTER.USD.20190912-DP_v2.xlsx",sheet ="Uganda") #%>% drop_na()
+mali<- read_excel("D:/Kamau Lift/SEEP/Corrections/SGELI_LT-Outcomes_DATA.MASTER.USD.20190912-DP_v2.xlsx",sheet ="Mali")# %>% drop_na()
+setDT(uganda)
+setDT(mali)
+library(dplyr)
+library(tidyr)
+library(knitr,kableExtra)
+library(formattable)
+library(ggplot2)
+setwd('D:/Kamau Lift/SEEP/Corrections')
+source('theme.R')
+colors <- c("#118467", "#A9711E", "#6D847A", "#BB8755", "#82ACA0", "#9C7F61",
+            "#D88523", "#83A593", "#E6A168", "#9DD0C0", "#BE9D7C", "#A2C8B9",
+            "#EBCABA", "#A1DBD3")
+```
+
+# Profits in Uganda and Mali
+
+```{r}
+P<-uganda[,grep("^ID$|Profit",names(uganda)),with =F]
+F1 <-P %>% drop_na() %>% arrange(Profit)
+P$ID<-factor(P$ID,levels =F1$ID)
+P %>% drop_na() %>% ggplot(aes(x =ID,y =Profit))+geom_bar(stat ='identity',fill =colors[1])+labs(title ="Group Profits  Uganda ",x ="Group  in Dollars")+theme(axis.text.x = element_blank())+theme(plot.title = element_text(hjust = 0.4))+scale_y_continuous(breaks =seq(0,1300,by =100))
+#+scale_fill_manual(values =colors[1])+ theme(axis.text = element_blank())
+```
+
+```{r}
+P<-mali[,grep("^ID$|Profit",names(mali)),with =F]
+F1 <-P %>% drop_na() %>% arrange(Profit)
+P$ID<-factor(P$ID,levels =F1$ID)
+P %>% drop_na() %>% ggplot(aes(x =ID,y =Profit))+geom_bar(stat ='identity',fill =colors[1])+labs(title ="Group Profits  mali ",x ="Group  in Dollars")+theme(axis.text.x = element_blank())+theme(plot.title = element_text(hjust = 0.4))+scale_y_continuous(breaks =seq(0,1300,by =100))
+#+scale_fill_manual(values =colors[1])+ theme(axis.text = element_blank())
+```
+
+# Return on Savings in Mali and Uganda
+
+```{r}
+P<-mali[,grep("^ID$|^RoS",names(mali)),with =F]
+F1 <-P %>% drop_na() %>% arrange(RoS)
+P$ID<-factor(P$ID,levels =F1$ID)
+P %>% drop_na() %>% ggplot(aes(x =ID,y =RoS))+geom_bar(stat ='identity',fill =colors[1])+labs(title ="Group Return on Savings  Mali ",x ="Group ",y="RoS as a Percentage")+theme(axis.text.x = element_blank())+theme(plot.title = element_text(hjust = 0.4))#+scale_y_continuous(breaks =seq(0,1300,by =100))
+#+scale_fill_manual(values =colors[1])+ theme(axis.text = element_blank())
+```
+
+```{r}
+P<-uganda[,grep("^ID$|^RoS",names(uganda)),with =F]
+F1 <-P %>% drop_na() %>% arrange(RoS)
+P$ID<-factor(P$ID,levels =F1$ID)
+P %>% drop_na() %>% ggplot(aes(x =ID,y =RoS))+geom_bar(stat ='identity',fill =colors[1])+labs(title ="Group Return on Savings  Uganda ",x ="Group ",y="RoS as a Percentage")+theme(axis.text.x = element_blank())+theme(plot.title = element_text(hjust = 0.4))+scale_y_continuous(breaks =seq(0,1,by =.1))
+#+scale_fill_manual(values =colors[1])+ theme(axis.text = element_blank())
+```
+
+# Return on Assets
+
+```{r}
+P<-uganda[,grep("^ID$|^RoA",names(uganda)),with =F]
+F1 <-P %>% drop_na() %>% arrange(RoA)
+P$ID<-factor(P$ID,levels =F1$ID)
+P %>% drop_na() %>% ggplot(aes(x =ID,y =RoA))+geom_bar(stat ='identity',fill =colors[1])+labs(title ="Group Return on Assets  Uganda ",x ="Group ",y="RoA as a Percentage")+theme(axis.text.x = element_blank())+theme(plot.title = element_text(hjust = 0.4))+scale_y_continuous(breaks =seq(0,1,by =.1))
+#+scale_fill_manual(values =colors[1])+ theme(axis.text = element_blank())
+```
+
+```{r}
+P<-mali[,grep("^ID$|^RoA",names(mali)),with =F]
+F1 <-P %>% drop_na() %>% arrange(RoA)
+P$ID<-factor(P$ID,levels =F1$ID)
+P %>% drop_na() %>% ggplot(aes(x =ID,y =RoA))+geom_bar(stat ='identity',fill =colors[1])+labs(title ="Group Return on Assets  mali ",x ="Group ",y="RoA as a Percentage")+theme(axis.text.x = element_blank())+theme(plot.title = element_text(hjust = 0.4))+scale_y_continuous(breaks =seq(0,1,by =.1))
+#+scale_fill_manual(values =colors[1])+ theme(axis.text = element_blank())
+```
+
+# Current Membership
+
+```{r}
+members<-uganda[,grep("^ID$|MenInPresent|WomenInPresent|Country|MembersInPresent",names(uganda)),with = F]
+members1<-mali[,grep("^ID$|MenInPresent|WomenInPresent|Country|MembersInPresent",names(mali)),with = F]
+df = rbind(members,members1) %>% drop_na()
+R<-df %>% arrange(MembersInPresent)
+df$ID<-factor(df$ID,levels= R$ID)
+y =melt(df[,-c('MembersInPresent')],id.vars =c('Country','ID'))
+ml <- y[y$Country =="Mali"]
+ug <-y[y$Country=="Uganda"]
+
+#ug %>% ggplot(aes(x =ID,y=value,fill =variable))+geom_bar(stat ='identity')+facet_wrap(~Country)+theme1+scale_fill_manual(values=colors)+theme(axis.text.x = element_blank())+labs(title = "Group Members arranged by gender",y ="Number of Members")
+
+members<-uganda[,grep("^ID$|Country|OriginalMembers",names(uganda)),with = F]
+u =members %>% arrange(OriginalMembers)
+members$ID<-factor(members$ID,levels =u$ID)
+members$variable<-"OriginalMembers"
+names(members)<-c("ID" ,"Country", "value", "variable" )
+members[,value:=-value]
+members<-rbind(ug,members)
+members[1:402,] %>% ggplot(aes(x =ID,y=value,fill =variable))+geom_bar(stat ='identity')+facet_wrap(~Country)+theme1+scale_fill_manual(values=colors)+theme(axis.text.x = element_blank())+labs(title = "Original VS Current Group Members",y ="Number of Members")+scale_y_continuous(breaks =seq(-30,30 ,5))
+#members[1:402,] %>%drop_na() %>%  ggplot(aes(x =ID,y =value))+geom_bar(stat='identity',fill =colors[1])+theme1+scale_fill_manual(values=colors)+theme(axis.text.x = element_blank())+labs(title = "Original Group Members Uganda",y ="Number of Members")
+```
+
+
+```{r}
+members1<-mali[,grep("^ID$|MenInPresent|WomenInPresent|Country|MembersInPresent",names(mali)),with = F]
+#df = rbind(members,members1) %>% drop_na()
+R<-df %>% arrange(MembersInPresent)
+df$ID<-factor(df$ID,levels= R$ID)
+y =melt(df[,-c('MembersInPresent')],id.vars =c('Country','ID'))
+ml <- y[y$Country =="Mali"]
+ug <-y[y$Country=="Uganda"]
+#ml %>% ggplot(aes(x =ID,y=value,fill =variable))+geom_bar(stat ='identity')+facet_wrap(~Country)+theme1+scale_fill_manual(values=colors)+theme(axis.text.x = element_blank())+labs(title = "Group Members arranged by gender",y ="Number of Members")
+members<-mali[,grep("^ID$|Country|OriginalMembers",names(mali)),with = F]
+u =members %>% arrange(OriginalMembers)
+members$ID<-factor(members$ID,levels =u$ID)
+members$Variable ="OriginalMembers"
+names(members)<-c("ID" ,"Country" , "value" ,"variable" )
+members[,value:=-value]
+members<-rbind(ml,members)
+members %>%drop_na() %>%  ggplot(aes(x =ID,y =value,fill =variable))+geom_bar(stat='identity')+theme1+scale_fill_manual(values=colors)+theme(axis.text.x = element_blank())+labs(title = "Original Vs current Group Members",y ="Number of Members")+facet_wrap(~Country)
+
+```
+
+
+```{r}
+
+```
+

@@ -1,0 +1,2662 @@
+---
+title: "R Notebook"
+author: "John Kamau"
+date: "21/08/2019"
+output:
+  word_document: default
+  html_notebook: default
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,fig.width = 10,fig.height = 7)
+options(scipen=999)
+```
+
+```{r}
+library(readxl)
+library(data.table)
+library(dplyr)
+library(tidyr)
+library(knitr,kableExtra)
+library(formattable)
+library(ggplot2)
+source('theme.R')
+colors <- c("#118467", "#A9711E", "#6D847A", "#BB8755", "#82ACA0", "#9C7F61",
+            "#D88523", "#83A593", "#E6A168", "#9DD0C0", "#BE9D7C", "#A2C8B9",
+            "#EBCABA", "#A1DBD3")
+combined <- read_excel("D:/Kamau Lift/SEEP/combined.xlsx")
+setDT(combined)
+M1<-combined[,grep("^ID$|Country|SEEP_GROUPMEETING 1",names(combined)),with =F]
+M2<-combined[,grep("^ID$|Country|SEEP_GROUPMEETING 2",names(combined)),with =F]
+M3<-combined[,grep("^ID$|Country|SEEP_GROUPMEETING 3",names(combined)),with =F]
+# M1 <- read_excel("D:/Kamau Lift/SEEP/Group Meeting/SEEPGroupMeeting1_2019_13_08_13_53_New1.xlsx")
+# M2 <- read_excel("D:/Kamau Lift/SEEP/Group Meeting/SEEPGroupMeeting2_2019_13_08_13_56_new.xlsx")
+# M3 <- read_excel("D:/Kamau Lift/SEEP/Group Meeting/SEEPGroupMeeting_3_2019_13_08_13_58_new.xlsx")
+
+# setDT(M1)
+# setDT(M2)
+# setDT(M3)
+```
+
+# Q6	Did the meeting start late?
+
+```{r}
+library(janitor)
+x =M1[,grep("Country|Q_6",names(M1)),with =F]
+names(x)<-c("Country","Q_4")
+x$Group = 1
+x1=M2[,grep("Country|Q_4$",names(M2)),with =F]
+x1$Group = 2
+x2 =M3[,grep("Country|Q_4$",names(M3)),with =F]
+x2$Group = 3
+B<-rbind(x,x1,use.names=FALSE )
+B<-rbind(B,x2,use.names=FALSE )
+B[B$Country=="-"]<-NA
+B[,Late:=ifelse(Q_4==1,"Yes",ifelse(Q_4==2,"No",NA))]
+B$Late<-factor(B$Late,levels = c("Yes","No","Respondents","Percentage"))
+B<-B%>%drop_na() %>%  group_by(Country,Late,Group)  %>%  tally() %>% dcast(Late~Country+Group)
+rbind(B,c("Respondents",colSums(B[,c(2:7)])),fill=TRUE)[1:3,] %>% kable()
+per <- B%>%  adorn_percentages('col')
+rbind(per,c("Percentage",colSums(per[,c(2:7)])),fill=TRUE)[1:3,] %>% kable()
+
+```
+
+# Q7	How many minutes too late did the meeting start?
+
+```{r}
+x =M1[,grep("Country|Q_7",names(M1)),with =F]
+names(x)<-c("Country","Meeting1")
+x1=M2[,grep("Country|Q_5$",names(M2)),with =F]
+names(x1)<-c("Country","Meeting2")
+x2 =M3[,grep("Country|Q_5$",names(M3)),with =F]
+names(x2)<-c("Country","Meeting3")
+print("G1")
+x[x$Country=="-"]<-NA
+x[,Meeting1:=ifelse(Meeting1<0,NA,Meeting1)] %>%drop_na() %>%   ggplot(aes(y=Meeting1))+geom_boxplot(fill =colors[1])+theme1+scale_fill_manual(values = colors)+labs(title ="How many minutes too late did the meeting start? SEEP-GM-07",y ="Minutes",x="Meeting1")+scale_y_continuous(breaks=seq(0,250,10))+facet_wrap(~Country)
+print("G2")
+x1[x1$Country=="-"]<-NA
+x1[,Meeting2:=ifelse(Meeting2<0,NA,Meeting2)] %>%drop_na() %>%  ggplot(aes(y=Meeting2))+geom_boxplot(fill =colors[1])+theme1+scale_fill_manual(values = colors)+labs(title ="How many minutes too late did the meeting start? SEEP-GM-07",y ="Minutes",x="Meeting2 ")+scale_y_continuous(breaks=seq(0,250,10))+facet_wrap(~Country)
+x2[x2$Country=="-"]<-NA
+print('G3')
+x2[,Meeting3:=ifelse(Meeting3<0,NA,Meeting3)] %>%drop_na() %>%  ggplot(aes(y=Meeting3))+geom_boxplot(fill =colors[1])+theme1+scale_fill_manual(values = colors)+labs(title ="How many minutes too late did the meeting start? SEEP-GM-07",y ="Minutes",x="Meeting3 ")+scale_y_continuous(breaks=seq(0,250,10))+facet_wrap(~Country)
+#x2 %>% drop_na() %>% group_by(Country) %>% count()
+x$group =names(x)[2]
+x1$group =names(x1)[2]
+x2$group =names(x2)[2]
+J =rbind(x,x1,use.names=FALSE)
+J =rbind(J,x2,use.names=FALSE)
+J[J$Meeting1<0]<-NA
+J %>% drop_na() %>% group_by(Country,group) %>% dcast(group~Country)
+```
+
+# Q8	What was the reason/were the reasons the meeting started late?	(Multiple Selection)
+
+
+```{r}
+x =M1[,grep("Country|A_8",names(M1)),with =F]
+x$G <-"G1"
+x1=M2[,grep("Country|A_6",names(M2)),with =F][,c(1:7)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|A_6",names(M3)),with =F][,c(1:7)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+names(B)<-c("Country","Chairperson or other committee members were late","Members were late","The location was not ready yet","People were first talking and discussing","Nobody paid attention to the time","Other (specify)","G")
+B.melt<-melt(B,id.vars =c("Country","G"))
+B.melt[B.melt$Country=="-"]<-NA
+B.melt[B.melt$value==-1]<-0
+#B.melt[,Late:=ifelse(value==1,"Chairperson or other committee members were late",ifelse(value==2,"Members were late",ifelse(value==3,"The location was not ready yet",ifelse(value==4,"People were first talking and discussing",ifelse(value==5,"Nobody paid attention to the time",ifelse(value==6,"Other (specify)",NA))))))]
+B.melt$variable <-factor(B.melt$variable,levels = c("Chairperson or other committee members were late","Members were late","The location was not ready yet","People were first talking and discussing","Nobody paid attention to the time","Other (specify)","Respondents","Percentage"))
+B<-B.melt %>% drop_na() %>% group_by(Country,variable,G)  %>% dcast(variable~Country+G,fun =sum)
+#rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+B %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+#rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+per %>% kable()
+x[,1:2] %>% drop_na() %>% group_by(Country) %>% tally() %>% kable()
+x1[,1:2] %>%  drop_na() %>% group_by(Country) %>% tally() %>% kable()
+x2[,1:2] %>%  drop_na() %>% group_by(Country) %>% tally() %>% kable()
+```
+
+# Q9	Did the meeting start with a specific ritual, like a prayer, a song, a speech?	(Multiple Selection)
+
+```{r}
+x =M1[,grep("Country|A_9",names(M1)),with =F]
+x$G <-"G1"
+x1=M2[,grep("Country|A_7",names(M2)),with =F][,c(1:6)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|A_7",names(M3)),with =F][,c(1:6)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+names(B)<-c("Country","A song or dance","A prayer","A speech","Reciting group rules/constitution","Other (specify)","G")
+B.melt<-melt(B,id.vars =c("Country","G"))
+B.melt[B.melt$Country=="-"]<-NA
+#B.melt[,Ritual:=ifelse(value==1,"A song or dance",ifelse(value==2,"A prayer",ifelse(value==3,"A speech",ifelse(value==4,"Reciting group rules/constitution",ifelse(value==5,"Other (specify)",NA)))))]
+B.melt$variable <-factor(B.melt$variable,levels =c("A song or dance","A prayer","A speech","Reciting group rules/constitution","Other (specify)","Respondents",'Percentage'))
+
+B<-B.melt %>% drop_na() %>% group_by(Country,variable,G) %>% dcast(variable~Country+G,fun =sum)
+B %>% kable()
+#rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+x[,1:2] %>% drop_na() %>% group_by(Country) %>% tally()
+x1[,1:2] %>% drop_na() %>% group_by(Country) %>% tally()
+x2[,1:2]%>% drop_na() %>% group_by(Country) %>% tally()
+```
+
+# Q10	Did the meeting have a round of questions or comment where each member got a chance to speak?	
+
+```{r}
+x =M1[,grep("Country|Q_10",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_8",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_8",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_10","G")
+B[,Questions:=ifelse(Q_10==1,"Yes",ifelse(Q_10==2,"No",ifelse(Q_10==3,"Other (specify)",ifelse(Q_10==4,"I don’t know",NA))))]
+B$Questions<-factor(B$Questions,levels=c("Yes","No","Other (specify)","I don’t know","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Questions,G) %>% dcast(Questions~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q11	How were the savings collected?	
+
+```{r}
+x =M1[,grep("Country|Q_11",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_9",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_9",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_11","G")
+B[,Savings:=ifelse(Q_11==1,"One member was called at a time",ifelse(Q_11==2,"All members put their savings at the same time",ifelse(Q_11==3,"It was supposed to be one member at a time but it was chaotic and some doing at same time",ifelse(Q_11==4,"Other (specify)",NA))))]
+B$Savings<-factor(B$Savings,levels=c("One member was called at a time","All members put their savings at the same time",
+"It was supposed to be one member at a time but it was chaotic and some doing at same time","Other (specify)","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Savings,G) %>% dcast(Savings~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Others in Q_11
+
+```{r}
+x =M1[,grep("Country|Q_11",names(M1)),with =F]#[,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_9",names(M2)),with =F]#[,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_9",names(M3)),with =F]#[,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+names(B)<-c("Country","D1","Others",'G')
+B[,Others:=tolower(Others)] %>% group_by(Country,Others) %>% tally() %>% kable()
+```
+
+
+# Q12	Did each savings amount get counted?	
+
+```{r}
+x =M1[,grep("Country|Q_12",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_10",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_10",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_12","G")
+B[,Savings:=ifelse(Q_12==1,"Yes, each savings amount got counted and the total was announced by a money counter",ifelse(Q_12==2,"Yes, each savings amount got counted but total not announced",ifelse(Q_12==3,"No, savings was not counted but put in view of others without counting",ifelse(Q_12==4,"No, savings was not counted and not in view of others",ifelse(Q_12==5,"Other (specify)",NA)))))]
+B$Savings<-factor(B$Savings,levels=c("Yes, each savings amount got counted and the total was announced by a money counter",
+"Yes, each savings amount got counted but total not announced","No, savings was not counted but put in view of others without counting","No, savings was not counted and not in view of others","Other (specify)","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Savings,G)  %>% dcast(Savings~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q14	How were the savings recorded?	
+
+```{r}
+x =M1[,grep("Country|Q_14",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_12",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_12",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_14","G")
+B[,Savings:=ifelse(Q_14==1,"Written record of each member’s savings",ifelse(Q_14==2,"Non-written system for each members’s savings.",ifelse(Q_14==3,"Some written system but only for total",ifelse(Q_14==4,"Memory based system but only for total",ifelse(Q_14==5,"Other (specify)",NA)))))]
+B$Savings<-factor(B$Savings,levels=c("Written record of each member’s savings","Non-written system for each members’s savings.","Some written system but only for total","Memory based system but only for total","Other (specify)","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Savings,G)%>% dcast(Savings~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+```{r}
+x =M1[,grep("Country|Q_14",names(M1)),with =F]#[,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_12",names(M2)),with =F]#[,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_12",names(M3)),with =F]#[,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+names(B)<-c("Country","D1","Others",'G')
+B %>% group_by(Country,Others) %>% count() %>% kable()
+```
+
+
+# Q15	Do members have an individual pass-book?	
+
+```{r}
+x =M1[,grep("Country|Q_15",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_13",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_13",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_15","G")
+B[,Passbook:=ifelse(Q_15==1,"Yes, and they keep it themselves and bring it to the meeting",ifelse(Q_15==2,"Yes, but it is kept in the group",ifelse(Q_15==3,"No, no passbooks",ifelse(Q_15==4,"Other (specify)",NA))))]
+B$Passbook<-factor(B$Passbook,levels=c("Yes, and they keep it themselves and bring it to the meeting","Yes, but it is kept in the group","No, no passbooks","Other (specify)","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Passbook,G) %>% dcast(Passbook~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q16	Did the savings get recorded in the individual pass-books?	
+
+
+```{r}
+x =M1[,grep("Country|Q_16",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_14",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_14",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_16","G")
+B[,Passbook:=ifelse(Q_16==1,"Yes, with stamps for each share bought",ifelse(Q_16==2,"Yes, with a pen indicating each share bought",ifelse(Q_16==3,"Yes, amounts written out",ifelse(Q_16==4,"Other (specify)",NA))))]
+B$Passbook<-factor(B$Passbook,levels=c("Yes, with stamps for each share bought","Yes, with a pen indicating each share bought","Yes, amounts written out","Other (specify)","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Passbook,G)  %>% dcast(Passbook~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q17	Did any of the group-members not save at all? How many did not save at all?	
+
+```{r,fig.height =8}
+x =M1[,grep("Country|Q_17",names(M1)),with =F]#[,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_15",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_15",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_17","G")
+B %>% drop_na() %>% ggplot(aes(x=G,y =Q_17))+geom_boxplot(fill =colors[1])+facet_wrap(~Country)+labs(title ="Did any of the group-members not save at all? How many did not save at all?	SEEP-GM-17",x ="Group_meetings",y ="Members who didnt save")+theme1+scale_fill_manual(values=colors)+scale_y_continuous(breaks=seq(0,65,5))
+ B %>% drop_na() %>% group_by(Country,G) %>% dcast(Country~G) %>% kable()
+```
+
+# Q18	Who did not save?	
+
+```{r}
+x =M1[,grep("Country|Q_18",names(M1)),with =F]#[,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_16",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_16",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_18","G")
+B[,Non_savers:=ifelse(Q_18==1,"People who were absent",ifelse(Q_18==2,"People present",ifelse(Q_18==3,"Both absent and present people",NA)))]
+B$Non_savers<-factor(B$Non_savers,levels =c("People who were absent","People present","Both absent and present people","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Non_savers,G)  %>% dcast(Non_savers~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q19	Was it considered against the rules that some people did not save?	
+
+```{r}
+x =M1[,grep("Country|Q_19",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_17",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_17",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_19","G")
+B[,Non_savers:=ifelse(Q_19==1,"Yes, very much",ifelse(Q_19==2,"Yes, but no big deal made of it",ifelse(Q_19==3,"No, did not seem to",ifelse(Q_19==4,"No, it was clearly according to the rules, it is allowed to miss savings",ifelse(Q_19==5,"Other (specify)",NA)))))]
+B$Non_savers<-factor(B$Non_savers,levels =c("Yes, very much","Yes, but no big deal made of it","No, did not seem to","No, it was clearly according to the rules, it is allowed to miss savings","Other (specify)","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Non_savers,G)  %>% dcast(Non_savers~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q20	Did the group give out loans at the meeting?	
+
+```{r}
+x =M1[,grep("Country|Q_20",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_18",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_18",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_20","G")
+B[,Loans:=ifelse(Q_20==1,"Yes",ifelse(Q_20==2,"No",ifelse(Q_20==3,"Other (specify)",NA)))]
+B$Loans<-factor(B$Loans,levels =c("Yes","No","Other (specify)","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Loans,G)  %>% dcast(Loans~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q22	Did people request loans or were they offered loans?	
+
+```{r}
+x =M1[,grep("Country|Q_22",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_20",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_20",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_22","G")
+B[,Loans:=ifelse(Q_22==1,"Each member had the chance to request for a loan",ifelse(Q_22==2,"Specific members were asked whether they wanted a loan",ifelse(Q_22==3,"Specific members were assigned to get a loan",ifelse(Q_22==4,"Other (specify)",NA))))]
+B$Loans<-factor(B$Loans,levels =c("Each member had the chance to request for a loan","Specific members were asked whether they wanted a loan","Specific members were assigned to get a loan","Other (specify)","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Loans,G)  %>% dcast(Loans~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Others File
+
+```{r}
+x =M1[,grep("Country|Q_22",names(M1)),with =F]#[,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_20",names(M2)),with =F]#[,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_20",names(M3)),with =F]#[,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+namers<-c("Country" ,"D1","Others" , "G")
+names(B)<-namers
+B %>% drop_na() %>% group_by(Country,Others) %>% count()
+```
+
+
+# Q23	How were the loan allocated?	
+
+```{r}
+x =M1[,grep("Country|Q_23",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_21",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_21",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_23","G")
+B[,Loans:=ifelse(Q_23==1,"There were more applicants for loans than available loans, so only some were successful at getting a loan",ifelse(Q_23==2,"All those requesting a loan received a loan",ifelse(Q_23==3,"Loans were given (it was assumed all wanted a loan)",ifelse(Q_23==4,"Loans were assigned (people were forced to take a loan)",ifelse(Q_23==5,"Other (specify)",NA)))))]
+B$Loans<-factor(B$Loans,levels =c("There were more applicants for loans than available loans, so only some were successful at getting a loan","All those requesting a loan received a loan","Loans were given (it was assumed all wanted a loan)",
+"Loans were assigned (people were forced to take a loan)","Other (specify)","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Loans,G)  %>% dcast(Loans~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q24	Did loan recipients need to meet financial criteria?	
+
+
+```{r}
+x =M1[,grep("Country|Q_24",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_22",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_22",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_24","G")
+B[,Loans:=ifelse(Q_24==1,"Yes, record keeper verified that loans were within a specified multiple of member’s savings.",ifelse(Q_24==2,"Yes, loan eligibility depended on previous repayment or other criteria",ifelse(Q_24==3,"No, anyone could take a loan",ifelse(Q_24==4,"Other(specify)",NA))))]
+B$Loans<-factor(B$Loans,levels =c("Yes, record keeper verified that loans were within a specified multiple of member’s savings.",
+"Yes, loan eligibility depended on previous repayment or other criteria","No, anyone could take a loan","Other(specify)","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Loans,G)  %>% dcast(Loans~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q25	Were any rules about loan purpose applied or discussed?
+
+
+```{r}
+x =M1[,grep("Country|Q_25",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_23",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_23",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_25","G")
+B[,Loans:=ifelse(Q_25==1,"Yes, loan purpose had to be productive",ifelse(Q_25==2,"Yes, loan purpose had to be useful (could be productive, emergencies, school fees...)",ifelse(Q_25==3,"loan purpose was mentioned but no criteria seemed required",ifelse(Q_25==4,"Loan purpose was not discussed",ifelse(Q_25==5,"Other (specify)",NA)))))]
+B$Loans<-factor(B$Loans,levels =c("Yes, loan purpose had to be productive","Yes, loan purpose had to be useful (could be productive, emergencies, school fees...)",
+"loan purpose was mentioned but no criteria seemed required","Loan purpose was not discussed","Other (specify)","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Loans,G)  %>% dcast(Loans~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q26	Who made the loan approval decision?	
+
+```{r}
+x =M1[,grep("Country|Q_26",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_24",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_24",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_26","G")
+B[,Loans:=ifelse(Q_26==1,"The chairperson",ifelse(Q_26==2,"The committee",ifelse(Q_26==3,"The entire savings-group (voting)",ifelse(Q_26==4,"Just by discussion, nobody decided",ifelse(Q_26==5,"All requests automatically approved",ifelse(Q_26==6,"Other (specify)",NA))))))]
+B$Loans<-factor(B$Loans,levels =c("The chairperson","The committee","The entire savings-group (voting)","Just by discussion, nobody decided","All requests automatically approved","Other (specify)","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Loans,G) %>% dcast(Loans~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q27	What is the interest rate charged for loans given at the meeting?	
+
+```{r}
+x =M1[,grep("^ID$|Country|Q_27",names(M1)),with =F]#[,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("^ID$|Country|Q_25",names(M2)),with =F]#[,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("^ID$|Country|Q_25",names(M3)),with =F]#[,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("ID","Country","Q_27","G")
+B[,Q_27:=ifelse(Q_27<0,NA,Q_27)]
+B %>% drop_na() %>% ggplot(aes(x=G,y =Q_27))+geom_boxplot(fill =colors[1])+facet_wrap(~Country)+labs(title ="What is the interest rate charged for loans given at the meeting?		SEEP-GM-27",x ="Group_meetings",y ="Interest rates as a Percentage")+theme1+scale_fill_manual(values=colors)+scale_y_continuous(breaks=seq(0,11,1))
+B$ID <-1:924
+w<-B %>% arrange(Q_27)
+B$ID<-factor(B$ID,levels=w$ID)
+B %>% drop_na() %>% ggplot(aes(x =ID,y =Q_27))+geom_bar(stat ='identity',col =colors[1])+facet_wrap(~Country+G)+theme1+scale_fill_manual(values =colors)+labs(title ="What is the interest rate charged for loans given at the meeting?		SEEP-GM-27",x ="Group_meetings",y ="Interest rates as a Percentage")+theme(axis.text.x = element_blank())
+B %>% drop_na() %>% group_by(Country,G) %>% dcast(Country~G) %>% kable()
+```
+
+# Q28	how is that calculated?	
+
+```{r}
+x =M1[,grep("Country|Q_28",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_26",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_26",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_28","G")
+B[,Calculated:=ifelse(Q_28==1,"One time, on amount borrowed.",ifelse(Q_28==2,"Monthly, for period borrowed.",ifelse(Q_28==3,"Recalculated each month on declining balance of loan",ifelse(Q_28==4,"Other:",NA))))]
+B$Calculated<-factor(B$Calculated,levels =c("One time, on amount borrowed.","Monthly, for period borrowed.","Recalculated each month on declining balance of loan","Other:","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Calculated,G)  %>% dcast(Calculated~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q29	Did the group make any other decisions?
+
+ ```{r}
+ x =M1[,grep("Country|A_29",names(M1)),with =F][,c(1:4)]
+ x$G <-"G1"
+ x1=M2[,grep("Country|A_27",names(M2)),with =F]#[,c(1:2)]
+# x1$G <-"G2"
+# x2 =M3[,grep("Country|A_27",names(M3)),with =F]#[,c(1:2)]
+# x2$G <-"G3"
+# B <-rbind(x,x1,use.names=FALSE)
+# B<-rbind(B,x2,use.names=FALSE)
+# B[B$Country=="-"]<-NA
+# B.melt <-melt(B,id.vars=c("Country","G"))
+# B.melt[,Decisions:=ifelse(value==1,"New rules",ifelse(value==2,"Change rule(s)",ifelse(value==3,"Allowing new members",ifelse(value==4,"Dealing with defaulted loans",ifelse(value==5,"Dealing with members leaving",ifelse(value==6,"Other issues (specify)",ifelse(value==7,"no other decision",NA)))))))]
+# B$Decisions<-factor(B$Decisions,levels =c("New rules","Change rule(s)","Allowing new members",
+# "Dealing with defaulted loans","Dealing with members leaving","Other issues (specify)","no other decision","Respondents","Percentage"))
+# B<-B.melt%>% drop_na() %>% group_by(Country,Decisions,G)  %>% dcast(Decisions~Country+G)
+# rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+# per <- B%>%  adorn_percentages('col')
+ per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+ rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+```{r}
+x =M1[,grep("Country|A_29",names(M1)),with =F][,c(1:4)]
+ x$G <-"G1"
+ x1=M2[,grep("Country|A_27",names(M2)),with =F]#[,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|A_27",names(M3)),with =F]#[,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","New rules","Change rule(s)","Allowing new members","G")
+B.melt <-melt(B,id.vars=c("Country","G"))
+B<-B.melt %>% drop_na() %>% group_by(Country,G) %>% dcast(variable~Country+G,fun =sum)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# 30	Who made the decision about {0} ?	
+
+```{r,fig.width =10}
+x =M1[,grep("Country|Q_30",names(M1)),with =F][,c(1:15)]
+ x$G <-"G1"
+ x1=M2[,grep("Country|Q_28",names(M2)),with =F][,c(1:15)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_28",names(M3)),with =F][,c(1:15)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+B.melt<-melt(B,id.vars =c("Country","G"))
+B.melt$value[B.melt$value==-1]<-NA
+setDT(B.melt)
+B.melt<-B.melt %>% drop_na()
+B.melt[,variable:=gsub("SEEP_GROUPMEETING 1_","",variable)]
+B.melt[,variable:=gsub("_Q_30_S","",variable)]
+B.melt[,variable:=gsub("_Q_30","",variable)]
+B.melt[,value:=ifelse(value==1,"The chairperson",ifelse(value==2,"The committee",ifelse(value==3,"The entire savings-group (voting)",ifelse(value==4,"Just by discussion, nobody decided",ifelse(value==5,"All requests automatically approved",'Other (specify)')))))]
+B.melt %>% ggplot(aes(x =variable,fill =value))+geom_bar(position ='fill')+theme1+scale_fill_manual(values =colors)+labs(title ="	Who made the decision about {0} ?	SEEP-GM-30",x ="Decision")+coord_flip()+facet_wrap(~Country+G)
+```
+
+# Others Files
+
+```{r}
+x =M1[,grep("Country|Q_30",names(M1)),with =F][,c(1,15)]
+ x$G <-"G1"
+ x1=M2[,grep("Country|Q_28",names(M2)),with =F][,c(1,15)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_28",names(M3)),with =F][,c(1,15)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","test","G")
+B %>% drop_na() %>% group_by(Country,test) %>% count()
+```
+
+
+
+
+
+
+
+
+
+# Q31	Did the group have any conflict or disagreement in the meeting?	
+
+```{r}
+x =M1[,grep("Country|Q_31",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_29",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_29",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_31","G")
+B[,Conflict:=ifelse(Q_31==1,"Yes, a large disagreement/conflict",ifelse(Q_31==2,"Yes, just small disagreements",ifelse(Q_31==3,"No, I did not notice anything",ifelse(Q_31==4,"Other (specify)",NA))))]
+B$Conflict <-factor(B$Conflict,levels =c("Yes, a large disagreement/conflict","Yes, just small disagreements","No, I did not notice anything","Other (specify)","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Conflict,G)  %>% dcast(Conflict~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+
+x =M1[,grep("Country|Q_31",names(M1)),with =F]#[,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_29",names(M2)),with =F]#[,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_29",names(M3)),with =F]#[,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-namers
+B %>% drop_na() %>% group_by(Country,Others) %>% count()
+```
+
+# Q32	Was the conflict or disagreement resolved?
+
+```{r}
+x =M1[,grep("Country|Q_32",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_30",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_30",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_32","G")
+B[,Conflict:=ifelse(Q_32==1,"Yes",ifelse(Q_32==2,"More or less",ifelse(Q_32==3,"No",ifelse(Q_32==4,"Other (specify)",NA))))]
+B$Conflict <-factor(B$Conflict,levels =c("Yes","More or less","No","Other (specify)","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Conflict,G)  %>% dcast(Conflict~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# 33	What was the issue?
+
+```{r}
+x =M1[,grep("Country|Q_33",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_31",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_31",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Others","G")
+B %>% drop_na() %>% group_by(Others) %>% count()
+```
+
+# 34	How was it resolved?
+
+```{r}
+x =M1[,grep("Country|Q_34",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_32",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_32",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Others","G")
+B %>% drop_na() %>% group_by(Others) %>% count()
+```
+
+# Q35	At the end of the meeting, how many members had outstanding loans?
+
+```{r,fig.width =10}
+x =M1[,grep("Country|Q_35",names(M1)),with =F]#[,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_33",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_33",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+#B[,Q_27:=ifelse(Q_35<0,NA,Q_35)]
+names(B)<-c("Country","Q_35","G")
+B %>% drop_na() %>% ggplot(aes(x=G,y =Q_35))+geom_boxplot(fill =colors[1])+facet_wrap(~Country)+labs(title ="At the end of the meeting, how many members had outstanding loans?		SEEP-GM-35",x ="Group_meetings",y ="Members with loans")+theme1+scale_fill_manual(values=colors)+scale_y_continuous(breaks=seq(0,60,5))
+B$ID<-1:924
+xx<-B %>% arrange(B$Q_35)
+B$ID<-factor(B$ID,levels = xx$ID)
+B %>% ggplot(aes(x =ID,y =Q_35))+geom_bar(stat ="identity",col =colors[1])+facet_wrap(~Country+G)+scale_fill_manual(values =colors)+theme1+labs(title ="At the end of the meeting, how many members had outstanding loans?		SEEP-GM-35",x ="Group_meetings",y ="Members with loans")+scale_y_continuous(breaks=seq(0,60,5))
+B %>% drop_na() %>% group_by(Country,G) %>% dcast(Country~G) %>% kable()
+```
+
+# Q36	Does the group have a social fund?	
+
+```{r}
+x =M1[,grep("Country|Q_36",names(M1)),with =F]#[,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_34",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_34",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_36","G")
+B[,Fund:=ifelse(Q_36==1,"Yes",ifelse(Q_36==2,"No",NA))]
+B$Fund <-factor(B$Fund,levels =c("Yes","No","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Fund,G) %>% dcast(Fund~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q37	How is it funded?	
+
+```{r}
+x =M1[,grep("Country|Q_37",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_35",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_35",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_37","G")
+B[,Fund:=ifelse(Q_37==1,"Members contribute a fixed amount every meeting",ifelse(Q_37==2,"Members contribute up to a certain amount then contributions are frozen until it drops below that amount.",ifelse(Q_37==3,"Other:",NA)))]
+B$Fund <-factor(B$Fund,levels =c("Members contribute a fixed amount every meeting","Members contribute up to a certain amount then contributions are frozen until it drops below that amount.","Other:","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Fund,G) %>% dcast(Fund~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q38	What are the conditions to access the social fund?	
+
+```{r}
+x =M1[,grep("Country|Q_38",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_36",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_36",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_38","G")
+B[,Fund:=ifelse(Q_38==1,"Members borrow with interest",ifelse(Q_38==2,"Members borrow without interest",ifelse(Q_38==3,"Members are given gifts that are not repaid",ifelse(Q_38==4,"Fund is used to support people outside of group",ifelse(Q_38==5,"Other:",NA)))))]
+B$Fund <-factor(B$Fund,levels =c("Members borrow with interest","Members borrow without interest","Members are given gifts that are not repaid","Fund is used to support people outside of group","Other:","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Fund,G)  %>% dcast(Fund~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q39	What are the criteria for receiving social fund money?	
+
+```{r}
+x =M1[,grep("Country|Q_39",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_37",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_37",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_39","G")
+B[,Fund:=ifelse(Q_39==1,"Specific list of uses only (such as death, birth, injury)",ifelse(Q_39==2,"Request money for any social need",ifelse(Q_39==3,"Other (specify)",NA)))]
+B$Fund <-factor(B$Fund,levels =c("Specific list of uses only (such as death, birth, injury)",
+"Request money for any social need","Other (specify)","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Fund,G)  %>% dcast(Fund~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q40	What is the balance of the Social Fund?
+
+* Mali exchange rate 0.00169950
+* Uganda exchange rate 0.000270226
+
+
+```{r}
+ug =0.0002708606
+ml =0.0017068220
+x =M1[,grep("Country|Q_40",names(M1)),with =F]#[,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_38",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_38",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_40","G")
+B[,Q_40:=ifelse(Q_40<0,NA,Q_40)]
+ML <-B[B$Country=="Mali"]
+UG <-B[B$Country=="Uganda"]
+ML %>% drop_na() %>% ggplot(aes(x=G,y =Q_40*ml))+geom_boxplot(fill =colors[1])+labs(title ="What is the balance of the Social Fund?		SEEP-GM-40 Mali",x ="Group_meetings",y ="Outstanding Funds in dollars")+theme1+scale_fill_manual(values=colors)+scale_y_continuous(breaks=seq(0,10,1))
+print("Uganda")
+UG %>% drop_na() %>% ggplot(aes(x=G,y =Q_40*ug))+geom_boxplot(fill =colors[1])+labs(title ="What is the balance of the Social Fund?		SEEP-GM-40 Uganda",x ="Group_meetings",y ="Outstanding Funds in dollars")+theme1+scale_fill_manual(values=colors)+scale_y_continuous(breaks=seq(0,100,5))+coord_cartesian(ylim =c(0,100))
+ B %>% drop_na() %>% group_by(Country,G)%>%count() %>% dcast(Country~G) %>% kable()
+```
+
+# Q41	Did any elections take place or get discussed for committee positions?
+
+```{r}
+x =M1[,grep("Country|Q_41",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_39",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_39",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_41","G")
+B[,Elections:=ifelse(Q_41==1,"No, not mentioned",ifelse(Q_41==2,"Yes, discussed but planned for later",ifelse(Q_41==3,"Yes, elections took place",ifelse(Q_41==4,"Other (specify)",NA))))]
+B$Elections <-factor(B$Elections,levels =c("No, not mentioned","Yes, discussed but planned for later","Yes, elections took place","Other (specify)","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Elections,G) %>% dcast(Elections~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q44	How was the cash handled?	
+
+```{r}
+x =M1[,grep("Country|Q_44",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_42",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_42",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_44","G")
+B[,Cash:=ifelse(Q_44==1,"Separate money counter/ separate bookkeeper/ separate treasurer,",ifelse(Q_44==2,"Separate bookkeeper / treasurer",ifelse(Q_44==3,"All done by same person",ifelse(Q_44==4,"Other (specify)",NA))))]
+B$Cash <-factor(B$Cash,levels =c("Separate money counter/ separate bookkeeper/ separate treasurer,","Separate bookkeeper / treasurer","All done by same person","Other (specify)","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Cash,G) %>% dcast(Cash~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q45	Where was the cash money stored between previous and this meeting?
+
+```{r}
+x =M1[,grep("Country|Q_45",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_43",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_43",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_45","G")
+B[,Cash:=ifelse(Q_45==1,"In a box with several locks",ifelse(Q_45==2,"In a box with 1 lock",ifelse(Q_45==3,"In another container that could be locked",ifelse(Q_45==4,"In another container locked with one lock",ifelse(Q_45==5,"No money was left (all lent out)",ifelse(Q_45==6,"Other (specify)",NA))))))]
+B$Cash <-factor(B$Cash,levels =c("In a box with several locks","In a box with 1 lock","In another container that could be locked","In another container locked with two or more locks","In another container locked with one lock","No money was left (all lent out)","Other (specify)","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Cash,G)  %>% dcast(Cash~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q46	Did any of the money from the group get stored in a (bank-)account or mobile money account between last and this meeting?	
+
+```{r}
+x =M1[,grep("Country|Q_46",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_44",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_44",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_46","G")
+B[,Cash:=ifelse(Q_46==1,"Yes, all excess cash was stored in the account",ifelse(Q_46==2,"Yes, some excess cash was stored in the account",ifelse(Q_46==3,"No, the excess cash was too little",ifelse(Q_46==4,"No, it was not considered",ifelse(Q_46==5,"Other (specify)",ifelse(Q_46==6,"I don’t know",ifelse(Q_46==7,"I don’t want to answer",NA)))))))]
+B$Cash <-factor(B$Cash,levels =c("Yes, all excess cash was stored in the account","Yes, some excess cash was stored in the account","No, the excess cash was too little","No, it was not considered","Other (specify)","I don’t know","I don’t want to answer","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Cash,G)  %>% dcast(Cash~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q47	Did any of the money from the group get stored in different places, e.g. different group members?
+
+```{r}
+x =M1[,grep("Country|Q_47",names(M1)),with =F][,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_45",names(M2)),with =F][,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_45",names(M3)),with =F][,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_47","G")
+B[,Cash:=ifelse(Q_47==1,"All in one place",ifelse(Q_47==2,"In two places",ifelse(Q_47==3,"Other (specify)",ifelse(Q_47==4,"I don’t know",NA))))]
+B$Cash <-factor(B$Cash,levels =c("All in one place","In two places","Other (specify)","I don’t know","Respondents","Percentage"))
+B<-B%>% drop_na() %>% group_by(Country,Cash,G) %>% dcast(Cash~Country+G)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q48	How many members attended in total?	 (Multiple Selection)
+
+```{r,fig.width=20,fig.height=15}
+library(plotly)
+x =M1[,grep("Country|T_48",names(M1)),with =F]#[,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|T_46",names(M2)),with =F]#[,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|T_46",names(M3)),with =F]#[,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","number attended personallly",	"represented by someone else (person stayed)",	"Rep. by someone with the savings (didnt stay)",	"sent their money through other group-member",	"had announced they would be absent",	"had a known emergency and were absent",	"absent for unknown reason and not represented","G")
+B.melt<-melt(B,id.vars =c("Country","G"))
+B.melt$variable <-factor(B.melt$variable,levels =c("number attended personallly",	"represented by someone else (person stayed)",	"Represented by someone with the savings (person did not stay)",	"sent their money through other group-member",	"had announced they would be absent",	"had a known emergency and were absent",	"absent for unknown reason and not represented"))
+UG<-B.melt[B.melt$Country=="Uganda"]
+ML<-B.melt[B.melt$Country=="Mali"]
+h<- UG %>% drop_na() %>% ggplot(aes(x=variable,y =value))+geom_boxplot(fill =colors[1])+labs(title ="How many members attended in total? SEEP-GM-48 \n Uganda",x ="Absent Members",y ="Members")+theme1+scale_fill_manual(values=colors)+facet_wrap(~G)+coord_flip()+theme(axis.title = element_text(size = 20))+scale_y_continuous(breaks =seq(0,40,5))
+#(h)
+h
+print("Mali")
+y<-ML%>% drop_na() %>% ggplot(aes(x=variable,y =value))+geom_boxplot(fill =colors[1])+labs(title ="How many members attended in total? SEEP-GM-48 \n Mali",x ="Absent Members",y ="Members")+theme1+scale_fill_manual(values=colors)+facet_wrap(~G)+coord_flip()+theme(axis.title = element_text(size = 20))+scale_y_continuous(breaks =seq(0,40,5))
+y
+#(y)
+ B %>% drop_na() %>% group_by(Country,G) %>% dcast(Country~G) %>% kable()
+```
+```{r}
+B.melt %>% drop_na() %>% ggplot(aes(x=G,y =value,fill =variable))+geom_bar(stat ='identity',position ="fill")+theme1+scale_fill_manual(values =colors)
+```
+
+# Q49	How many members arrived after meeting started?
+
+
+```{r}
+x =M1[,grep("Country|Q_49",names(M1)),with =F]#[,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|Q_47",names(M2)),with =F]#[,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_47",names(M3)),with =F]#[,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","Q_49","G")
+B %>% drop_na() %>% ggplot(aes(x=G,y =Q_49))+geom_boxplot(fill =colors[1])+labs(title ="How many members arrived after meeting started? SEEP-GM-49",x ="Absent Members",y ="Members")+theme1+scale_fill_manual(values=colors)+facet_wrap(~Country)+scale_y_continuous(breaks =seq(1,25,1))#+coord_flip()+theme(axis.title = element_text(size = 20))
+B$ID<-1:924
+xx<-B %>% arrange(B$Q_49)
+B$ID<-factor(B$ID,levels = xx$ID)
+x<-B %>% ggplot(aes(x =ID,y =Q_49))+geom_bar(stat ="identity",col =colors[1])+facet_wrap(~Country+G)+scale_fill_manual(values =colors)+theme1+labs(title ="At the end of the meeting, how many members had outstanding loans?		SEEP-GM-35",x ="Group_meetings",y ="Members with loans")+scale_y_continuous(breaks=seq(0,60,5))+theme(axis.text.x = element_blank())
+x
+#(x)
+ B %>% drop_na() %>% group_by(Country,G)%>% dcast(Country~G) %>% kable()
+```
+
+# Q50	Has the group experienced any of the following since last meeting up to end of this meeting?	(Multiple Selection)
+
+```{r,fig.width =10}
+x =M1[,grep("Country|T_50",names(M1)),with =F]#[,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|T_48",names(M2)),with =F]#[,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|T_48",names(M3)),with =F]#[,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-	c("Country","Lost money through theft or fraud from a committee member","Lost money through theft by outsider",	"Member(s) dropout",	"Death of a member",	"Poor administration",	"Dishonesty by members causing loss of money",	"Members paying loan late",	"Members not repaying loan",	"Errors in records in ledger or passbook",	"Election new committee",
+	"Elections but same committee appointed",	"Lock box broken into",	"Lock box stolen/lost",	"Money deposited in bank-account",
+	"Money lost/stolen on the way to or from bank-account",	"Disputes between members",	"Disputes between committee and members",	"Disputes amongst committee members","G")
+B.melt<-melt(B,id.vars =c("Country","G"))
+B.melt[,Exp:=ifelse(value==1,"Yes",ifelse(value==2,"No",ifelse(value==3,"Don't know",NA)))]
+B.melt$variable <-factor(B.melt$variable,levels =c("Lost money through theft or fraud from a committee member","Lost money through theft by outsider",	"Member(s) dropout",	"Death of a member",	"Poor administration",	"Dishonesty by members causing loss of money",	"Members paying loan late",	"Members not repaying loan",	"Errors in records in ledger or passbook",	"Election new committee",
+	"Elections but same committee appointed",	"Lock box broken into",	"Lock box stolen/lost",	"Money deposited in bank-account",
+	"Money lost/stolen on the way to or from bank-account",	"Disputes between members",	"Disputes between committee and members",	"Disputes amongst committee members"))
+B.melt$Exp<-factor(B.melt$Exp,levels =c("Yes","No","Don't know"))
+UG =B.melt[B.melt$Country=="Uganda"]
+ML =B.melt[B.melt$Country=="Mali"]
+h<-UG %>% drop_na() %>% ggplot(aes(x=variable,fill=Exp))+geom_bar(position ="fill")+coord_flip()+theme1+scale_fill_manual(values =colors)+labs(title ="Has the group experienced any of the following since \n last meeting up to end of this meeting? SEEP-GM-50 \n Uganda")+theme(axis.title = element_text(size = 14))
+h
+#(h)
+h<-ML %>% drop_na() %>% ggplot(aes(x=variable,fill=Exp))+geom_bar(position ="fill")+coord_flip()+theme1+scale_fill_manual(values =colors)+labs(title ="Has the group experienced any of the following since \n last meeting up to end of this meeting? SEEP-GM-50 \n Mali")+theme(axis.title = element_text(size = 14))
+#(h)
+ B %>% drop_na() %>% group_by(Country,G)%>%count() %>% dcast(Country~G) %>% kable()
+```
+
+# Q51	Was any of the following used at the group-meeting?	(Multiple Choice)
+
+```{r}
+x =M1[,grep("Country|A_51",names(M1)),with =F]#[,c(1:2)]
+
+x$G <-"G1"
+x1=M2[,grep("Country|A_49",names(M2)),with =F]#[,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|Q_49",names(M3)),with =F]#[,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+
+names(B)<-c("Country","Calculator on phone","Separate calculator","App on phone including e-recording","Tablet or computer","Mobile money","eWallet","None","G")
+B.melt <-melt(B,id.vars =c("Country","G"))
+B.melt$value[B.melt$value==-1]<-0
+#B.melt[,Tech:=ifelse(value==1,"Calculator on phone",ifelse(value==2,"Separate calculator",ifelse(value==3,"App on phone including e-recording",ifelse(value==4,"Tablet or computer",ifelse(value==5,"Mobile money",ifelse(value==6,"eWallet",ifelse(value==7,"None",NA)))))))]
+B.melt$variable<-factor(B.melt$variable,levels =c("Calculator on phone","Separate calculator","App on phone including e-recording","Tablet or computer","Mobile money","eWallet","None","Respondents","Percentage"))
+B<-B.melt %>% drop_na() %>% group_by(Country,variable,G)  %>% dcast(variable~Country+G,fun =sum)
+rbind(B,c("Respondents",colSums(B[,c(2:7)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali_G1)),2:7] <-per[c(1:length(per$Mali_G1)),2:7] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+
+
+```
+
+Individual Questions Group Meeting 2
+-----
+
+# Q_52 M2What type of relationship(s) does the group have with a financial service provider?	(Multiple Selection)
+
+
+```{r}
+library(janitor)
+x1=M2[,grep("Country|52",names(M2)),with =F]#[,c(1:2)]
+names(x1) <-c("Country","Individual group members have accounts (unrelated to the group)",
+"Individual group members have loans (unrelated to the group, group not guaranteeing loan)",
+"Individual group members have accounts as a result of the group",
+"Individual group members have loans, related to the group, group guaranteeing loan or member’s track record helping to get the loan",
+"Group has an account (e.g. for excess funds)",
+"Group has a loan from financial service provider",
+"I don’t know",
+"I don’t want to answer")
+B <-melt(x1,id.vars="Country")
+B[B$value==-1]<-NA
+B<-B %>% drop_na() %>% group_by(Country,variable) %>% dcast(variable~Country,fun =sum)
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+
+```
+
+# 53	Does the group have an account	
+
+
+```{r}
+
+x1=M2[,grep("Country|53",names(M2)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","Q_53")
+x1[,Q_53:=ifelse(Q_53==1,"Yes",ifelse(Q_53==2,"No",ifelse(Q_53==3,"I don’t know",ifelse(Q_53==4,"I don’t want to answer",NA))))]
+x1$Q_53 <-factor(x1$Q_53,levels =c('Yes','No','I don’t know','I don’t want to answer','Respondents',"Percentage"))
+B<-x1 %>% drop_na() %>% group_by(Country,Q_53) %>% count() %>% dcast(Q_53~Country)
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+
+```
+
+# 54	In what type of institution does the group have an account?	
+
+```{r}
+
+x1=M2[,grep("Country|54",names(M2)),with =F][,c(1:8,10)]
+names(x1)<-c("Country","Commercial Bank","MDIs","MFIs","Credit institutions","SACCOs","MNO (mobile money)","Other (specify)","I don’t want to answer")
+x1.melt<-melt(x1,id.vars ="Country")
+x1.melt$value[x1.melt$value==-1]<-0
+B<-x1.melt %>% drop_na() %>% group_by(Country,variable) %>% dcast(variable~Country,fun =sum)
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+
+```
+
+
+# 55	How did the group obtain the {0}  account?	
+
+```{r,fig.width = 10}
+
+x1=M2[,grep("Country|55",names(M2)),with =F]
+x1.melt<-melt(x1,id.vars ="Country")
+x1.melt[x1.melt$value==-1]<-NA
+x1.melt[,value:=ifelse(value==1,"Entirely group’s initiative/idea",ifelse(value==2,"Due to information from outside entity",ifelse(value==3,"Suggested by outside entity",ifelse(value==4,"Recommended by outside entity",ifelse(value==5,"Imposed by outside entity",ifelse(value==6,"Given by outside entity",ifelse(value==7,"I don’t know","I don’t want to answer")))))))]
+x1.melt[,variable:=gsub("SEEP_GROUPMEETING 2_|_Q_55","",variable)]
+x1.melt %>% drop_na() %>% ggplot(aes(x=variable,fill =value))+geom_bar(position ="fill")+theme1+scale_fill_manual(values=colors)+coord_flip()+labs(title ="How did the group obtain the {0}  account? SEEP-M2-55")+facet_wrap(~Country)
+# rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+# per <- B%>%  adorn_percentages('col')
+# per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+# rbind(per,c("Percentage",c(1,1)))  %>% kable()
+x1.melt %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# 56	For what is the {0} account used for the group?	
+
+<!-- Saving excess liquidity throughout the cycle -->
+<!-- Keeping large amounts before share-out -->
+<!-- Transferring money to group members -->
+<!-- Receiving money from group-members -->
+<!-- Transferring money to outsiders -->
+<!-- Receiving money from outsiders -->
+<!-- Receiving and repaying loans from external source -->
+<!-- Other (specify) -->
+<!-- I don’t know -->
+<!-- I don’t want to answer -->
+<!-- The account is not used -->
+```{r,fig.width = 10,fig.height =10}
+library(stringr)
+x1=M2[,grep("Country|56",names(M2)),with =F]
+x1.melt<-melt(x1,id.vars ="Country")
+x1.melt$variable<-as.character(x1.melt$variable)
+x1.melt[,Account:=substr(variable,nchar(variable)-1,nchar(variable))]
+x1.melt[,Account:=gsub("_","",Account)]
+x1.melt[,Account:=ifelse(Account==1,"Saving excess liquidity throughout the cycle",ifelse(Account==2,"Keeping large amounts before share-out",ifelse(Account==3,"Transferring money to group members",ifelse(Account==4,"Receiving money from group-members",ifelse(Account==5,"Transferring money to outsiders",ifelse(Account==6,"Receiving money from outsiders",ifelse(Account==7,"Receiving and repaying loans from external source",ifelse(Account==8,"Other (specify)",ifelse(Account==9,"I don’t know",ifelse(Account==10,"I don’t want to answer","The account is not used"))))))))))]
+x1.melt[x1.melt$value==-1]<-NA
+x1.melt[,variable:=gsub("SEEP_GROUPMEETING 2_|_[A-Z]_56_[1-9]{1,2}","",variable)]
+x1.melt[,value:=ifelse(value==1,"Yes",ifelse(value==0,"No",value))]
+x1.melt %>% drop_na() %>% ggplot(aes(x =Account,fill =value))+geom_bar(position ='fill')+theme1+scale_fill_manual(values=colors)+labs(title ="For what is the {0} account used for the group? SEEP-GM2-56")+facet_wrap(~Country+variable)+coord_flip()
+x1.melt %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# 57	For what is the {0} account used by the members?	
+
+<!-- Saving -->
+<!-- Sending money to group -->
+<!-- Sending money to others -->
+<!-- Receiving money from group -->
+<!-- Receiving money from others -->
+<!-- Getting a loan -->
+<!-- Repaying a loan -->
+<!-- Other (specify) -->
+```{r,fig.width = 10,fig.height =10}
+library(stringr)
+x1=M2[,grep("Country|57",names(M2)),with =F]
+x1.melt<-melt(x1,id.vars ="Country")
+x1.melt$variable<-as.character(x1.melt$variable)
+x1.melt[,Account:=substr(variable,nchar(variable)-1,nchar(variable))]
+x1.melt[,Account:=gsub("_","",Account)]
+x1.melt[,Account:=ifelse(Account==1,"Saving",ifelse(Account==2,"Sending money to group",ifelse(Account==3,"Sending money to others",ifelse(Account==4,"Receiving money from group",ifelse(Account==5,"Receiving money from others",ifelse(Account==6,"Getting a loan",ifelse(Account==7,"Repaying a loan",ifelse(Account==8,"Other (specify)",NA))))))))]
+x1.melt[x1.melt$value==-1]<-NA
+x1.melt[,variable:=gsub("SEEP_GROUPMEETING 2_|_[A-Z]_57_[1-9]{1,2}","",variable)]
+x1.melt[,value:=ifelse(value==1,"Yes",ifelse(value==0,"No",value))]
+x1.melt %>% drop_na() %>% ggplot(aes(x =Account,fill =value))+geom_bar(position ='fill')+theme1+scale_fill_manual(values=colors)+labs(title ="For what is the {0} account used by the members? SEEP-GM2-57")+facet_wrap(~Country+variable)+coord_flip()
+x1.melt %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+#58	Has your group considered using the services of a Financial Service Provider
+
+<!-- Yes -->
+<!-- Not sure -->
+<!-- No -->
+<!-- Other (specify) -->
+
+* No response in this question
+
+```{r,fig.width = 10,fig.height =10}
+library(stringr)
+x1=M2[,grep("Country|58",names(M2)),with =F]
+x1.melt<-melt(x1,id.vars ="Country")
+#x1.melt$variable<-as.character(x1.melt$variable)
+#x1.melt[,Account:=substr(variable,nchar(variable)-1,nchar(variable))]
+#x1.melt[,Account:=gsub("_","",Account)]
+#x1.melt[,Account:=ifelse(Account==1,"Saving",ifelse(Account==2,"Sending money to group",ifelse(Account==3,"Sending money to others",ifelse(Account==4,"Receiving money from group",ifelse(Account==5,"Receiving money from others",ifelse(Account==6,"Getting a loan",ifelse(Account==7,"Repaying a loan",ifelse(Account==8,"Other (specify)",NA))))))))]
+x1.melt[x1.melt$value==-1]<-NA
+x1.melt[,variable:=gsub("SEEP_GROUPMEETING 2_|_[A-Z]_58_[1-9]{1,2}","",variable)]
+x1.melt[,value:=ifelse(value==1,"Yes",ifelse(value==0,"No",value))]
+#x1.melt %>% drop_na() %>% ggplot(aes(x =variable,fill =value))+geom_bar(position ='fill')+theme1+scale_fill_manual(values=colors)+labs(title ="For what is the {0} account used by the members? SEEP-GM2-57")+coord_flip()
+#x1.melt %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# 59	Why doesn’t your group have an account?	
+
+* No response in this Question
+
+<!-- We are too small -->
+
+<!-- Too far to bank -->
+<!-- Too many charges -->
+<!-- Don’t trust bank -->
+<!-- Don’t know how -->
+<!-- Don’t have registration we need -->
+<!-- Haven’t done it yet but will some day -->
+<!-- Other: -->
+
+```{r,fig.width = 10,fig.height =10}
+library(stringr)
+x1=M2[,grep("Country|59",names(M2)),with =F]
+x1.melt<-melt(x1,id.vars ="Country")
+#x1.melt$variable<-as.character(x1.melt$variable)
+#x1.melt[,Account:=substr(variable,nchar(variable)-1,nchar(variable))]
+#x1.melt[,Account:=gsub("_","",Account)]
+#x1.melt[,Account:=ifelse(Account==1,"Saving",ifelse(Account==2,"Sending money to group",ifelse(Account==3,"Sending money to others",ifelse(Account==4,"Receiving money from group",ifelse(Account==5,"Receiving money from others",ifelse(Account==6,"Getting a loan",ifelse(Account==7,"Repaying a loan",ifelse(Account==8,"Other (specify)",NA))))))))]
+x1.melt[x1.melt$value==-1]<-NA
+x1.melt[,variable:=gsub("SEEP_GROUPMEETING 2_|_[A-Z]_58_[1-9]{1,2}","",variable)]
+x1.melt[,value:=ifelse(value==1,"Yes",ifelse(value==0,"No",value))]
+#x1.melt %>% drop_na() %>% ggplot(aes(x =variable,fill =value))+geom_bar(position ='fill')+theme1+scale_fill_manual(values=colors)+labs(title ="For what is the {0} account used by the members? SEEP-GM2-57")+coord_flip()
+#x1.melt %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# 60	Which financial services would be useful for your group?	Open an account
+
+* No response on this question as well
+
+<!-- Keeping excess savings at FSP -->
+<!-- Group loan to increase loan fund -->
+<!-- Transferring money to members -->
+<!-- Receiving money from members -->
+<!-- Mobile money to transfer money to members -->
+<!-- Mobile money to receive money from members -->
+<!-- Insurance (specify) -->
+<!-- Other (specify) -->
+
+```{r,fig.width = 10,fig.height =10}
+library(stringr)
+x1=M2[,grep("Country|60",names(M2)),with =F]
+x1.melt<-melt(x1,id.vars ="Country")
+#x1.melt$variable<-as.character(x1.melt$variable)
+#x1.melt[,Account:=substr(variable,nchar(variable)-1,nchar(variable))]
+#x1.melt[,Account:=gsub("_","",Account)]
+#x1.melt[,Account:=ifelse(Account==1,"Saving",ifelse(Account==2,"Sending money to group",ifelse(Account==3,"Sending money to others",ifelse(Account==4,"Receiving money from group",ifelse(Account==5,"Receiving money from others",ifelse(Account==6,"Getting a loan",ifelse(Account==7,"Repaying a loan",ifelse(Account==8,"Other (specify)",NA))))))))]
+x1.melt[x1.melt$value==-1]<-NA
+x1.melt[,variable:=gsub("SEEP_GROUPMEETING 2_|_[A-Z]_58_[1-9]{1,2}","",variable)]
+x1.melt[,value:=ifelse(value==1,"Yes",ifelse(value==0,"No",value))]
+#x1.melt %>% drop_na() %>% ggplot(aes(x =variable,fill =value))+geom_bar(position ='fill')+theme1+scale_fill_manual(values=colors)+labs(title ="For what is the {0} account used by the members? SEEP-GM2-57")+coord_flip()
+#x1.melt %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+
+
+
+
+
+# Q61	Does the group use mobile money?	
+
+
+```{r}
+
+x1=M2[,grep("Country|61",names(M2)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","Q_61")
+
+x1[,Q_61:=ifelse(Q_61==1,"Yes",ifelse(Q_61==2,"No",ifelse(Q_61==3,"I don’t know",ifelse(Q_61==4,"I don’t want to answer",NA))))]
+x1$Q_61<-factor(x1$Q_61,levels =c("Yes","No","I don’t know","I don’t want to answer",'Respondents','Percentage'))
+B<-x1 %>% drop_na() %>% group_by(Country,Q_61) %>% count() %>% dcast(Q_61~Country)
+B[is.na(B)]<-0
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>%replace_na(list(x = 0, y = 0)) %>%  kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+
+```
+
+<!-- # 62 In what way(s) does the group use mobile money? -->
+
+<!-- ```{r} -->
+<!-- x1=M2[,grep("Country|62",names(M2)),with =F]#[,c(1:2)] -->
+<!-- X =melt(x1,id.vars ="Country") -->
+<!-- X$value[X$value==-1]<-NA -->
+<!-- X[,Value:=ifelse(value==1,"Receiving savings deposits and loan repayments from members",ifelse(value==2,"Disbursing loans to members",ifelse(value==3,"Paying business partners",ifelse(value==4,"Getting paid by business partners",ifelse(value==5,"Receiving loans",ifelse(value==6,"Keeping excess savings amount safe",ifelse(value==7,"Keeping large amounts before share out",ifelse(value==8,"Other (specify)",NA))))))))] -->
+<!-- X$Value<-factor(X$Value,levels =c("Receiving savings deposits and loan repayments from members","Disbursing loans to members","Paying business partners", -->
+<!-- "Getting paid by business partners","Receiving loans","Keeping excess savings amount safe","Keeping large amounts before share out", -->
+<!-- "Other (specify)","Respondents","Percentage")) -->
+<!-- X %>% drop_na() %>% group_by(Country,Value) %>% dcast(Value~Country) %>% kable() -->
+<!-- X %>% drop_na() %>% group_by(Country) %>% count() -->
+
+<!-- ``` -->
+
+
+
+
+
+
+# 63	Do group members use mobile money? (Multiple Selection)
+
+```{r,fig.height=6,fig.width =7}
+
+x1=M2[,grep("Country|63",names(M2)),with =F]#[,c(1:2)]
+x1$ID =c(1:308)
+x1$ID<-as.factor(x1$ID)
+names(x1)<-c("Country","Yes","No","ID")
+B<-melt(x1,id.vars =c("ID","Country"))
+H<-copy(x1)
+H$sum<-rowSums(H[,c(2,3)])
+H<-H %>% arrange(sum)
+B$ID<-factor(B$ID,levels =H$ID)
+M<-subset(B,B$Country =="Mali")
+U<-subset(B,B$Country =="Uganda")
+M %>% ggplot(aes(x =ID,y =value,fill =variable))+geom_bar(stat ='identity')+theme1+scale_fill_manual(values=colors)+labs(title ="Do group members use mobile money? SEEP_GROUPMEETING_2_63",x ="Groups",y="Number that said no")+theme(axis.text.x = element_blank())+scale_y_continuous(breaks =seq(0,130,5))+facet_wrap(~Country)
+U %>% ggplot(aes(x =ID,y =value,fill =variable))+geom_bar(stat ='identity')+theme1+scale_fill_manual(values=colors)+labs(title ="Do group members use mobile money? SEEP_GROUPMEETING_2_63",x ="Groups",y="Number that said no")+theme(axis.text.x = element_blank())+scale_y_continuous(breaks =seq(0,130,5))+facet_wrap(~Country)
+B$value[B$value==0]<-NA
+#x =B %>% drop_na() %>% ggplot(aes(x =ID,y =value,fill =variable))+geom_bar(stat ='identity')+theme1+scale_fill_manual(values=colors)+labs(title ="Do group members use mobile money? SEEP_GROUPMEETING_2_63",x ="Groups",y="Number that said No/Yes")+theme(axis.text.x = element_blank())+scale_y_continuous(breaks =seq(0,130,5))+facet_wrap(~Country)
+##(x)
+B$value<-as.numeric(B$value)
+B %>% drop_na() %>% group_by(Country,variable) %>% summarise(Median =median(value),Mean =mean(value)) %>%kable()
+#+facet_wrap(~variable)
+# B %>% drop_na() %>% ggplot(aes(x =ID,y =value))+geom_bar(stat ="identity",fill =colors[1])+theme1+scale_fill_manual(values=colors)+labs(title ="Do group members use mobile money? SEEP_GROUPMEETING_2_63",x ="Groups",y ="Number that said Yes")+theme(axis.text.x = element_blank())+scale_y_continuous(breaks =seq(0,80,5))+facet_wrap(~variable)
+# no<-B[B$variable=="No"]
+# H<-no %>% arrange(value)
+# no$ID<-factor(no$ID,levels =H$ID)
+# no %>% drop_na() %>% ggplot(aes(x =ID,y =value))+geom_bar(stat ="identity",fill =colors[1])+theme1+scale_fill_manual(values=colors)
+
+x1 %>% drop_na() %>% group_by(Country) %>% count() %>% kable()
+``` 
+
+# Q64	What is mobile money used for by the members? (Multiple Selection)
+
+
+```{r}
+
+x=M2[,grep("Country|64",names(M2)),with =F]
+x1 =x[,c(1:9)]
+names(x1)<-c("Country","Saving","Sending money to group","Sending money to others","Receiving money from group","Receiving money from others","Getting a loan","Repaying a loan","Other (specify)")
+B <-melt(x1,id.var ="Country")
+# B[,Value:=ifelse(value==1,"Saving",ifelse(value==2,"Sending money to group",ifelse(value==3,"Sending money to others",ifelse(value==4,"Receiving money from group",ifelse(value==5,"Receiving money from others",ifelse(value==6,"Getting a loan",ifelse(value==7,"Repaying a loan",ifelse(value==8,"Other (specify)",NA))))))))]
+B$variable<-factor(B$variable,levels=c("Saving","Sending money to group","Sending money to others","Receiving money from group","Receiving money from others",
+"Getting a loan","Repaying a loan","Other (specify)","Respondents","Percentage"))
+
+B<-B %>% drop_na() %>% group_by(Country,variable) %>% dcast(variable~Country,fun =sum)
+rbind(B,c("Respondents",152,143)) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#x1[,1:2] %>%drop_na() %>% group_by(Country)  %>% count()
+# H =x[,9:10]
+# names(H)<-c("C1","C2")
+# H[,C2:=gsub("airyime","airtime",C2)]
+# H[,C2:=gsub("nn|non|none|anothing|nono|nothing","no mobile money used",C2)]
+# H[,C2:=tolower(C2)]
+# H[,C2:=gsub("aucun|elles n’utilisent l’argent mobile|ils n’ont pas de l’argent mobile|ils n’utilisent pas l’argent mobile|l’argent mobile n’est pas utilisé|l’argent n’est pas utilisé|l’argent n’est pas utilisé par les membres|le groupe n’utilise pas de l’argent mobile|le groupe n’utilise pas l’argent mobile|le n’utilise pas argent mobile|le n’utilise pas l’argent mobile|les membres du groupe n’utilise pas l’argent mobile|
+# les membres n’utilise pas l’argent mobile|les membres n’utilisent pas de l’argent mobile|les membres n’utilisent pas l’argent mobile|Neabt|Neant|
+# Néant|no mobile money used|no mobile money used,because their don’t use mobile phone|Non|nous ne utilisons pas l,argent mobile|on utilise pas argent mobile|pas d’utilisateurs|","none",C2)]
+# H[,C2:=gsub("je ne sais pas|je sais pas|ne sais pas|ont sais pas","I don’t know",C2)]
+x<-data.frame(
+  Mobile_money_use=c("None","I dont Know","Buying Airtime","Personal Use","Poverty","Sending and Receiving from distant relatives","To pay school fees"),
+  count =c(105,21,2,4,1,1,1)) 
+rbind(x,c("Total",sum(x$count)))
+
+```
+
+# 65	How many members have a smart phone that they can use when they need it? (Mutiple Selection)
+
+```{r,fig.width =10,fig.height=5}
+j<-"#118467"
+x1=M2[,grep("Country|65",names(M2)),with =F]#[,c(1:2)]
+#names(x1)<-c("Country",	"How many group members have no phone",	"How many have the simplest phone",	"How many have a feature phone ",	"how many  have a simple smart phone ",	"How many have a full smart phone (any number of apps can be added)")
+names(x1)<-c("Country","no phone","the simplest phone","feature phone ","simple smart phone" ,"a full smart phone (any number of apps can be added)")
+x1$ID<-1:308
+y<-copy(x1)
+y$Sum<-rowSums(x1[,c("no phone","the simplest phone","feature phone ","simple smart phone" ,"a full smart phone (any number of apps can be added)")],na.rm = T)
+y<-y %>% arrange(Sum)
+x1$ID<-factor(x1$ID,levels =y$ID)
+B<-melt(x1,id.vars =c("ID","Country"))
+B %>% drop_na() %>% ggplot(aes(x=variable,y=value))+geom_boxplot(fill =j)+labs(title="How many members have a smart phone that \n they can use when they need it? \n SEEP-GM-M2-65",y="Number that have mobile phone",x ="Phone Type")+theme1+scale_fill_manual(values=colors)+scale_y_continuous(breaks =seq(0,80,5))+coord_flip()+facet_wrap(~Country)+facet_grid(rows =vars(Country))
+source('theme_c.R')
+B[,variable:=tolower(variable)]
+B[,variable:=gsub("how many group members have |how many have |how many  have a ","",variable)]
+B$variable<-factor(B$variable,levels =c("no phone","the simplest phone","feature phone ","simple smart phone" ,"a full smart phone (any number of apps can be added)"))
+M<-subset(B,B$Country=="Mali")
+U<-subset(B,B$Country=="Uganda")
+x<-M %>% ggplot(aes(x =ID,y =value,fill =variable))+geom_bar(stat ='identity')+theme3+scale_fill_manual(values=colors)+labs(title="How many members have a smart phone that \n they can use when they need it? \n SEEP-GM-M2-65",y="Number that have mobile phone",x ="Phone Type")+scale_y_continuous(breaks =seq(0,80,5))+facet_wrap(~Country)
+x
+#(x)
+x<-U %>% ggplot(aes(x =ID,y =value,fill =variable))+geom_bar(stat ='identity')+theme3+scale_fill_manual(values=colors)+labs(title="How many members have a smart phone that \n they can use when they need it? \n SEEP-GM-M2-65",y="Number that have mobile phone",x ="Phone Type")+scale_y_continuous(breaks =seq(0,80,5))+facet_wrap(~Country)
+x
+#(x)
+x1[,1:2] %>% drop_na() %>% group_by(Country) %>% count() %>% kable()
+```
+
+# 66	Does this VSLA group have relationships with the following type of organisations?	(Multiple Selection)
+
+```{r}
+
+x1=M2[,grep("Country|66",names(M2)),with =F][,-9]
+names(x1)<-c("Country","NGOs","CBOs","Government agencies","Religious institutions (mosque, church, ...)","Political party","Private company","Other (specify)","None","Does not want to answer")
+B<-melt(x1,id.vars="Country")
+
+# B[,Value:=ifelse(value==1,"NGOs",ifelse(value==2,"CBOs",ifelse(value==3,"Government agencies",ifelse(value==4,"Religious institutions (mosque, church, ...)",ifelse(value==5,"Political party",ifelse(value==6,"Private company",ifelse(value==7,"Other (specify)",ifelse(value==8,"None",ifelse(value==9,"Does not want to answer",NA)))))))))]
+B$variable<-factor(B$variable,levels=c('NGOs','CBOs','Government agencies','Religious institutions (mosque, church, ...)','Political party','Private company','Other (specify)','None','Does not want to answer','Respondents','Percentage'))
+B1<-B %>% drop_na() %>% group_by(Country,variable)
+B1<-B1%>% dcast(variable~Country,fun =sum)
+rbind(B1,c("Respondents",152,143)) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# 67	What type of relationship exist with {0} ?	
+
+<!-- Just contact (information exchange) -->
+<!-- They supervise us -->
+<!-- They advise us / awareness raising -->
+<!-- They give us training -->
+<!-- They sell to us -->
+<!-- They help us with selling/finding clients -->
+<!-- They give us market information/price information -->
+<!-- They give us money -->
+<!-- They give us loans -->
+<!-- They give us in-kind goods -->
+<!-- They help us build group network (savings group association) -->
+<!-- They do research/ data collection -->
+<!-- Other (specify) -->
+<!-- I don’t want to answer -->
+```{r,fig.width = 10,fig.height =10}
+library(stringr)
+x1=M2[,grep("Country|67",names(M2)),with =F]
+x1.melt<-melt(x1,id.vars ="Country")
+x1.melt$variable<-as.character(x1.melt$variable)
+x1.melt[,Account:=substr(variable,nchar(variable)-1,nchar(variable))]
+x1.melt[,Account:=gsub("_","",Account)]
+x1.melt[,Account:=ifelse(Account==1,"Just contact (information exchange)",ifelse(Account==2,"They supervise us",ifelse(Account==3,"They advise us / awareness raising",ifelse(Account==4,"They give us training",ifelse(Account==5,"They sell to us",ifelse(Account==6,"They help us with selling/finding clients",ifelse(Account==7,"They give us market information/price information",ifelse(Account==8,"They give us money",ifelse(Account==9,"They give us loans",ifelse(Account==10,"They give us in-kind goods",ifelse(Account==11,"They help us build group network (savings group association)",ifelse(Account==12,"They do research/ data collection",ifelse(Account==13,"Other (specify)",ifelse(Account==14,"I don’t want to answer",NA))))))))))))))]
+x1.melt[x1.melt$value==-1]<-NA
+x1.melt[,variable:=gsub("SEEP_GROUPMEETING 2_|_[A-Z]_67_[1-9]{1,2}","",variable)]
+x1.melt[,value:=ifelse(value==1,"Yes",ifelse(value==0,"No",value))]
+source('theme.R')
+M<-subset(x1.melt,x1.melt$Country=="Mali")
+U<-subset(x1.melt,x1.melt$Country=="Uganda")
+M %>% drop_na() %>% ggplot(aes(x =Account,fill =value))+geom_bar(position ='fill')+theme1+scale_fill_manual(values=colors)+labs(title ="What type of relationship exist with {0} ? SEEP-GM2-67")+facet_wrap(~Country+variable)+coord_flip()
+U %>% drop_na() %>% ggplot(aes(x =Account,fill =value))+geom_bar(position ='fill')+theme1+scale_fill_manual(values=colors)+labs(title ="What type of relationship exist with {0} ? SEEP-GM2-67")+facet_wrap(~Country+variable)+coord_flip()
+x1.melt %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# 68	When was the most recent contact with the {0} ?	
+
+<!-- I don’t remember -->
+<!-- I don’t want to answer -->
+```{r,fig.width = 7,fig.height =5}
+library(stringr)
+today ="2019-07-31"
+x1=M2[,grep("Country|68",names(M2)),with =F]
+x1.melt<-melt(x1,id.vars ="Country")
+x1.melt[,days:=difftime(today,value)]
+x1.melt[,days:=ifelse(days>10000,NA,days)]
+x1.melt[,variable:=gsub("SEEP_GROUPMEETING 2_|_[A-Z]_68|_[1-9]{1,2}","",variable)]
+#x1.melt[,value:=ifelse(value==1,"Yes",ifelse(value==0,"No",value))]
+source('theme.R')
+x1.melt$value<-as.Date(x1.melt$value)
+x1.melt %>%drop_na() %>% ggplot(aes(x =variable,y =value))+geom_boxplot(fill =j)+coord_flip()+labs(title ="When was the most recent contact with the {0} ?",x ='institution',y ="Last Contact Year")+ scale_y_date()+facet_wrap(~Country)
+x1.melt %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# 69	How satisfied are you with this relationship with the {0} ?	
+
+<!-- Very satisfied -->
+<!-- A little satisfied -->
+<!-- Neutral -->
+<!-- A little dissatisfied -->
+<!-- Very dissatisfied -->
+<!-- I don’t want to answer -->
+
+```{r,fig.width = 10,fig.height =10}
+library(stringr)
+x1=M2[,grep("Country|69",names(M2)),with =F]
+x1.melt<-melt(x1,id.vars ="Country")
+x1.melt$variable<-as.character(x1.melt$variable)
+
+x1.melt[x1.melt$value==-1]<-NA
+x1.melt[,variable:=gsub("SEEP_GROUPMEETING 2_|_Q_69","",variable)]
+x1.melt[,value:=ifelse(value==1,"Very satisfied",ifelse(value==2,"A little satisfied",ifelse(value==3,"Neutral",ifelse(value==4,"A little dissatisfied",ifelse(value==5,"Very dissatisfied",'I don’t want to answer')))))]
+source('theme.R')
+x1.melt %>% drop_na() %>% ggplot(aes(x =variable,fill =value))+geom_bar(position ='fill')+theme1+scale_fill_manual(values=colors)+labs(title ="What type of relationship exist with {0} ? SEEP-GM2-69")+coord_flip()+facet_wrap(~Country)
+x1.melt %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+
+# Q70	Is the group registered with any local authority? E.g. with the municipality, ministry of cooperatives, chamber of commerce, etc.	
+<!-- Yes -->
+<!-- No -->
+<!-- I don’t know -->
+<!-- I don’t want to answer -->
+```{r,fig.width = 10,fig.height =10}
+library(stringr)
+x1=M2[,grep("Country|70",names(M2)),with =F]
+names(x1)<-c("Country","var")
+x1$var[x1$var==-1]<-NA
+x1[,var:=ifelse(var==1,"Yes",ifelse(var==2,"No",ifelse(var==3,"I don’t know",'I don’t want to answer')))]
+x1$var<-factor(x1$var,levels=c("Yes","No","I don’t know",'I don’t want to answer',"Respondents","Percentage"))
+B<-x1 %>% drop_na() %>% group_by(Country,var) %>% dcast(var~Country)
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# 71	Why is the group registered?	
+
+<!-- # "It is an obligation from the government","We wanted to formalize our group / we wanted to register", -->
+<!-- # "We needed the registration for getting a bank account","We needed the registration for something else","Other (specify)" -->
+```{r,fig.width = 10,fig.height =10}
+library(stringr)
+x1=M2[,grep("Country|71",names(M2)),with =F][,1:2]
+names(x1)<-c("Country","var")
+x1$var[x1$var==-1]<-NA
+x1[,var:=ifelse(var==1,"It is an obligation from the government",ifelse(var==2,"We wanted to formalize our group / we wanted to register",ifelse(var==3,"We needed the registration for getting a bank account",ifelse(var==4,"We needed the registration for something else","Other (specify)"))))]
+x1$var<-factor(x1$var,levels=c("It is an obligation from the government","We wanted to formalize our group / we wanted to register",
+"We needed the registration for getting a bank account","We needed the registration for something else","Other (specify)","Respondents","Percentage"))
+B<-x1 %>% drop_na() %>% group_by(Country,var) %>% dcast(var~Country)
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# 72	At which office did you register the group?	
+
+```{r,fig.width = 10,fig.height =10}
+library(stringr)
+x1=M2[,grep("Country|71",names(M2)),with =F][,1:2]
+names(x1)<-c("Country","var")
+x1$var[x1$var==-1]<-NA
+x1[,var:=ifelse(var==1,"Department/Ministry of cooperatives",ifelse(var==2,"Townhall",ifelse(var==3,"Chamber of Commerce",ifelse(var==4,"Mosque/church","Other (specify)"))))]
+x1$var<-factor(x1$var,levels=c("Department/Ministry of cooperatives","Townhall","Chamber of Commerce","Mosque/church","Other (specify)","Respondents","Percentage"))
+B<-x1 %>% drop_na() %>% group_by(Country,var) %>% dcast(var~Country)
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# 73	Did it cost any money to register?	
+
+```{r,fig.width = 10,fig.height =10}
+library(stringr)
+x1=M2[,grep("Country|73",names(M2)),with =F]#[,1:2]
+names(x1)<-c("Country","var")
+x1$var[x1$var==-1]<-NA
+x1[,var:=ifelse(var==1,"Yes","No")]
+x1$var<-factor(x1$var,levels=c("Yes","No","Respondents","Percentage"))
+B<-x1 %>% drop_na() %>% group_by(Country,var) %>% dcast(var~Country)
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# 74	How much did the registration cost?	
+
+```{r,fig.width = 5,fig.height =7}
+ug = 3691.935
+ml =585.88
+library(stringr)
+x1=M2[,grep("Country|74",names(M2)),with =F][,1:2]
+names(x1)<-c("Country","var")
+x1$var[x1$var==-1]<-NA
+x1[,dollar:=ifelse(Country=="Uganda",var/ug,var/ml)]
+# x1[,var:=ifelse(var==1,"Yes","No")]
+# x1$var<-factor(x1$var,levels=c("Yes","No","Respondents","Percentage"))
+# B<-x1 %>% drop_na() %>% group_by(Country,var) %>% dcast(var~Country)
+# rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+# per <- B%>%  adorn_percentages('col')
+# per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+# rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+x1 %>% ggplot(aes(y =dollar))+geom_boxplot(fill =j)+facet_wrap(~Country)+scale_y_continuous(breaks =seq(0,100,5))+labs(title ="How much did the registration cost? \n SEEP-GM2_74",y ="Registration Cost in dollars")
+x1 %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# 75	What are the benefits of registration?	
+
+
+```{r,fig.width = 7,fig.height =7}
+library(stringr)
+x1=M2[,grep("Country|75",names(M2)),with =F][,1:6]
+names(x1)<-c("Country",	"Members take the group more seriously","Outsiders take the group more seriously","We can access support","We can open a bank-account","Other (specify)")
+x1[x1==-1]<-NA
+x1.melt<-melt(x1,id.vars="Country")
+x1.melt[,var:=ifelse(value==1,"Yes","No")]
+x1.melt %>% drop_na() %>% ggplot(aes(x =variable,fill =var))+geom_bar(position ='fill')+theme1+scale_fill_manual(values=colors)+labs(title ="What are the benefits of registration? \n SEEP-GM2-75")+coord_flip()+facet_wrap(~Country)
+jj<-M2[,grep("Country|75",names(M2)),with =F][,7]
+names(jj)<-'others'
+jj %>%drop_na() %>% group_by(others) %>% count()
+```
+
+# 76	Does the group still receive any type of training or information sessions from the original trainer/facilitating NGO?	
+<!-- Yes -->
+<!-- No -->
+```{r,fig.width = 10,fig.height =10}
+library(stringr)
+x1=M2[,grep("Country|76",names(M2)),with =F]#[,1:2]
+names(x1)<-c("Country","var")
+x1$var[x1$var==-1]<-NA
+x1[,var:=ifelse(var==1,"Yes","No")]
+x1$var<-factor(x1$var,levels=c("Yes","No","Respondents","Percentage"))
+B<-x1 %>% drop_na() %>% group_by(Country,var) %>% dcast(var~Country)
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# 77	What type of support/training/information?	
+
+```{r,fig.width = 10,fig.height =10}
+library(stringr)
+x1=M2[,grep("Country|77",names(M2)),with =F]#[,1:2]
+names(x1)<-c("Country","var")
+x1$var[x1$var==-1]<-NA
+x1 %>% drop_na() %>% group_by(var) %>% count() %>% count()
+``` 
+
+
+# Q78	Does the VSLA group have any joint economic activity?	
+
+```{r}
+x1=M2[,grep("Country|78",names(M2)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","Q_79")
+x1[,Q_79:=ifelse(Q_79==1,"Yes",ifelse(Q_79==2,"No",ifelse(Q_79==3,"I don’t know",ifelse(Q_79==4,"I don’t want to answer",NA))))]
+x1$Q_79 <-factor(x1$Q_79,levels =c("Yes","No","I don’t know","I don’t want to answer","Responents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,Q_79) %>% count()
+B1<-B1%>% dcast(Q_79~Country)
+rbind(B1,c("Respondents",colSums(B1[,c(2:3)],na.rm = T))) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# 79	If so, please describe what these joint economic activities are?	
+
+```{r}
+x1=M2[,grep("Country|79",names(M2)),with =F][,c(1:2)]
+names(x1)<-c("Country","Q_79")
+x1[,Q_79:=ifelse(Q_79==1,"Joint production",ifelse(Q_79==2,"Bulk purchases of inputs",ifelse(Q_79==3,"Bulk selling/Joint marketing of output",ifelse(Q_79==4,"Group business",ifelse(Q_79==5,"Other (specify)",NA)))))]
+x1$Q_79 <-factor(x1$Q_79,levels =c("Joint production","Bulk purchases of inputs","Bulk selling/Joint marketing of output","Group business","Other (specify)","Responents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,Q_79) %>% count()
+B1<-B1%>% dcast(Q_79~Country)
+rbind(B1,c("Respondents",colSums(B1[,c(2:3)],na.rm = T))) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+x1=M2[,grep("Country|79",names(M2)),with =F][,3]
+names(x1)<-"Others"
+x1 %>% drop_na() %>% group_by(Others) %>% count()
+```
+
+# 80	For each activity, does the whole group do it together, or only some of the members?	
+
+```{r}
+x1=M2[,grep("Country|80",names(M2)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","Q_79")
+x1[,Q_79:=ifelse(Q_79==1,"Yes, as the whole group together",ifelse(Q_79==2,"Yes, but only part of the group",ifelse(Q_79==3,"No",ifelse(Q_79==4,"I don’t know",ifelse(Q_79==5,"I don’t want to answer",NA)))))]
+x1$Q_79 <-factor(x1$Q_79,levels =c("Yes, as the whole group together","Yes, but only part of the group","No","I don’t know","I don’t want to answer","Responents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,Q_79) %>% count()
+B1<-B1%>% dcast(Q_79~Country)
+rbind(B1,c("Respondents",colSums(B1[,c(2:3)],na.rm = T))) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+
+# 81	Do the members trade with each other / provide each other business / refer customers to each other?	
+
+```{r}
+
+x1=M2[,grep("Country|81",names(M2)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","Q_81")
+x1[,Q_81:=ifelse(Q_81==1,"Yes",ifelse(Q_81==2,"No",ifelse(Q_81==3,"I don’t know",ifelse(Q_81==4,"I don’t want to answer",NA))))]
+x1$Q_81 <-factor(x1$Q_81,levels =c("Yes","No","I don’t know","I don’t want to answer","Responents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,Q_81) %>% count()
+B1<-B1%>% dcast(Q_81~Country)
+rbind(B1,c("Respondents",colSums(B1[,c(2:3)],na.rm = T))) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# 82	Does the group have any other form of innovation?
+
+```{r}
+
+x1=M2[,grep("Country|82",names(M2)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","Q_82")
+x1[,Q_82:=ifelse(Q_82==1,"Yes",ifelse(Q_82==2,"No",ifelse(Q_82==3,"I don’t know",ifelse(Q_82==4,"I don’t want to answer",NA))))]
+x1$Q_82 <-factor(x1$Q_82,levels =c("Yes","No","I don’t know","I don’t want to answer","Respondents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,Q_82) %>% count()
+B1<-B1%>% dcast(Q_82~Country)
+rbind(B1,c("Respondents",colSums(B1[,c(2:3)],na.rm = T))) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# 83	Are there women in local government (commune level)?
+
+```{r}
+
+x1=M2[,grep("Country|83",names(M2)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","Q_83")
+  x1[,Q_83:=ifelse(Q_83==1,"Yes, several",ifelse(Q_83==2,"Yes, one",ifelse(Q_83==3,"No, none",ifelse(Q_83==4,"I don’t know",ifelse(Q_83==5,"Does not want to answer",NA)))))]
+x1$Q_83 <-factor(x1$Q_83,levels =c("Yes, several","Yes, one","No, none","I don’t know","Does not want to answer","Responents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,Q_83) %>% count()
+B1<-B1%>% dcast(Q_83~Country)
+rbind(B1,c("Respondents",colSums(B1[,c(2:3)],na.rm = T))) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# 84	Are these elected women member of a VSLA savings group?	
+
+```{r}
+
+x1=M2[,grep("Country|84",names(M2)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","Q_84")
+x1[,Q_84:=ifelse(Q_84==1,"Yes, all",ifelse(Q_84==2,"Yes, some/one",ifelse(Q_84==3,"No, none",ifelse(Q_84==4,"I don’t know",ifelse(Q_84==5,"Does not want to answer",NA)))))]
+x1$Q_84 <-factor(x1$Q_84,levels =c("Yes, all","Yes, some/one","No, none","I don’t know","Does not want to answer","Responents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,Q_84) %>% count()
+B1<-B1%>% dcast(Q_84~Country)
+rbind(B1,c("Respondents",colSums(B1[,c(2:3)],na.rm = T))) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# 85	Is this elected woman member of a VSLA savings group that was formed by SaveUp or Banking on Change?	
+
+```{r}
+
+x1=M2[,grep("Country|85",names(M2)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","Q_85")
+x1[,Q_85:=ifelse(Q_85==1,"Yes",ifelse(Q_85==2,"No",ifelse(Q_85==3,"I don’t know",ifelse(Q_85==4,"Does not want to answer",NA))))]
+x1$Q_85 <-factor(x1$Q_85,levels =c("Yes","No","I don’t know","Does not want to answer","Respondents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,Q_85) %>% count()
+B1<-B1%>% dcast(Q_85~Country)
+rbind(B1,c("Respondents",colSums(B1[,c(2:3)],na.rm = T))) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# 86	Do you think their/her election is related to VSLA saving group membership?	
+
+```{r}
+
+x1=M2[,grep("Country|86",names(M2)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","Q_86")
+x1$ID<-1:308
+yy<-copy(x1)
+x1[,Q_86:=ifelse(Q_86==1,"Yes, due to savings groups she got elected",ifelse(Q_86==2,"No, there is no connection",ifelse(Q_86==3,"I don’t know",ifelse(Q_86==4,"Does not want to answer",NA))))]
+x1$Q_86 <-factor(x1$Q_86,levels =c("Yes, due to savings groups she got elected","No, there is no connection","I don’t know","Does not want to answer","Responents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,Q_86) %>% count()
+B1<-B1%>% dcast(Q_86~Country)
+rbind(B1,c("Respondents",colSums(B1[,c(2:3)],na.rm = T))) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# 87	How did the VSLA savings group membership help the election?	(Multiple Selection)
+
+```{r}
+HH<- subset(yy,yy$Q_86==1)
+x1=M2[,grep("Country|87",names(M2)),with =F][,c(1:6)]
+#x1<-x[,-7]
+x1$ID<-1:308
+x1<-subset(x1,x1$ID %in% HH$ID)
+names(x1)<-c("Country","She/they got confidence because of the SFC savings group so dared to be nominated","She/they got skills because of the SFC groups, so knew how to convince voters","She/they got all the votes from the SFC savings groups","She/they learned in the SFC savings group that it is important women get elected","Other (specify)","ID")
+x1<-melt(x1,id.vars="Country")
+# x1[,value:=ifelse(value==1,"She/they got confidence because of the SFC savings group so dared to be nominated",ifelse(value==2,"She/they got skills because of the SFC groups, so knew how to convince voters",ifelse(value==3,"She/they got all the votes from the SFC savings groups",ifelse(value==4,"She/they learned in the SFC savings group that it is important women get elected",ifelse(value==5,"Other (specify)",NA)))))]
+x1$variable<-factor(x1$variable,levels=c("She/they got confidence because of the SFC savings group so dared to be nominated",
+"She/they got skills because of the SFC groups, so knew how to convince voters",
+"She/they got all the votes from the SFC savings groups",
+"She/they learned in the SFC savings group that it is important women get elected",
+"Other (specify)","Responses","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,variable) %>% dcast(variable~Country,fun = sum)
+rbind(B1,c("Respondents",colSums(B1[,2:3]))) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+
+H<-M2[,grep("Country|87",names(M2)),with =F][,c(6:7)]
+names(H)<-c("C1","Other")
+H[,Other:=tolower(Other)]
+H[,Other:=gsub("aucun","aucune",Other)]
+H[,Other:=gsub("nothuneg much.|not related|not really|not applicable|none of the above","nothing",Other)]
+H[,Other:=gsub("none of members was elected|none of members is involved|none|non|no one|none of members|no member is a leader in the government|no member|g","no member is in local government",Other)]
+H %>% drop_na() %>% group_by(Other) %>% count() %>% kable()
+```
+
+# 88	What are other motivations for joining VSLA group apart from savings?	 (Multiple Selection)
+
+```{r}
+
+x1=M2[,grep("Country|88",names(M2)),with =F][,c(1:8)]
+names(x1)<-c("Country","Social/being with friends","Learning skills","Organizing women to be strong together","Possibility to get loan","Possibility to do a business as a group","Selling goods to others","Other (specify)")
+x1<-melt(x1,id.vars="Country")
+# x1[,value:=ifelse(value==1,"Social/being with friends",ifelse(value==2,"Learning skills",ifelse(value==3,"Organizing women to be strong together",ifelse(value==4,"Possibility to get loan",ifelse(value==5,"Possibility to do a business as a group",ifelse(value==6,"Selling goods to others",ifelse(value==7,"Other (specify)",NA)))))))]
+x1$variable<-factor(x1$variable,levels=c("Social/being with friends","Learning skills","Organizing women to be strong together","Possibility to get loan","Possibility to do a business as a group","Selling goods to others","Other (specify)","Respondents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,variable) %>% dcast(variable~Country,fun =sum)
+rbind(B1,c("Respondents",152,143)) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#x1 %>% group_by(Country) %>% count()
+```
+
+Individual Questions Group Meeting 3
+-----
+# Q51	Do you have a written constitution?	
+
+```{r}
+
+x1=M3[,grep("Country|51",names(M2)),with =F]
+names(x1)<-c("Country","Q_51")
+x1[,value:=ifelse(Q_51==1,"Yes",ifelse(Q_51==2,"No",ifelse(Q_51==3,"Other (specify)",NA)))]
+x1$value<-factor(x1$value,levels=c("Yes","No","Other (specify)","Respondents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,value) %>% dcast(value~Country)
+rbind(B1,c("Respondents",colSums(B1[,c(2:3)],na.rm = T))) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#x1[,1:2] %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# Q53	Since the group was formed, have you changed any of the rules, or adopted new rules?	
+
+```{r,fig.height=20,fig.width=20}
+
+x1=M3[,grep("Country|Q_53",names(M3)),with =F]
+names(x1)<-c("Country","Q_53")
+x1[,value:=ifelse(Q_53==1,"Yes",ifelse(Q_53==2,"No",NA))]
+x1$value<-factor(x1$value,levels=c("Yes","No","Respondents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,value) %>% dcast(value~Country)
+rbind(B1,c("Respondents",colSums(B1[,c(2:3)],na.rm = T))) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#x1 %>% group_by(Country) %>% count()
+```
+
+# Q54	Which rules were changed?	(Multiple Selection)
+
+#* No "Others" details for this question
+
+```{r,fig.height=20,fig.width=20}
+library(janitor)
+x1=M3[,grep("Country|A_54",names(M3)),with =F]
+names(x1)<-c("Country","Savings amount","Share amount","Loan amount","Loan interest","Loan duration","Loan eligibility","Social Fund","Fine","Other (specify)")
+x1<-melt(x1,id.vals ='Country')
+#x1[,value:=ifelse(value==1,"Share amount",ifelse(value==2,"Loan amount",ifelse(value==3,"Loan interest",ifelse(value==4,"Loan duration",ifelse(value==5,"Loan eligibility",ifelse(value==6,"Social Fund",ifelse(value==7,"Fine",ifelse(value==8,"Other (specify)",NA))))))))]
+x1$variable<-factor(x1$variable,levels=c("Savings amount","Share amount","Loan amount","Loan interest","Loan duration","Loan eligibility","Social Fund","Fine","Other (specify)","Respondents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,variable) %>% dcast(variable~Country,fun =sum)
+rbind(B1,c("Respondents",152,136)) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#x1 %>% group_by(Country) %>% count()
+```
+
+# 55	What was changed?
+
+```{r}
+x1=M3[,grep("Country|Q_55",names(M3)),with =F]
+names(x1)<-c("C","Others")
+x1[,Others:=tolower(Others)]
+x1 %>% drop_na() %>% group_by(Others) %>% count()
+```
+
+# 56	What are the rules of your group?
+
+```{r}
+x1=M3[,grep("Country|Q_56",names(M3)),with =F]
+names(x1)<-c("C","Others")
+x1[,Others:=tolower(Others)]
+x1 %>% drop_na() %>% group_by(Others) %>% count()
+```
+
+# 57	What are the rules for loan disbursement?	(Multiple Selection)
+
+```{r}
+
+x1=M3[,grep("Country|A_57",names(M3)),with =F]
+names(x1)<-c("Country","Maximum loan size","Maximum loan size based on savings amount","Maximum loan duration","Interest rate","Taking turns in taking loans","Whether loan use is productive","Other (specify)")
+x1<-melt(x1,id.vals ='Country')
+#x1[,value:=ifelse(value==1,"Maximum loan size",ifelse(value==2,"Maximum loan size based on savings amount",ifelse(value==3,"Maximum loan duration",ifelse(value==4,"Interest rate",ifelse(value==5,"Taking turns in taking loans",ifelse(value==6,"Whether loan use is productive",ifelse(value==7,"Other (specify)",NA)))))))]
+x1$variable<-factor(x1$variable,levels=c("Maximum loan size","Maximum loan size based on savings amount","Maximum loan duration","Interest rate","Taking turns in taking loans","Whether loan use is productive","Other (specify)","Respondents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,variable) %>% dcast(variable~Country,fun =sum)
+rbind(B1,c("Respondents",152,136)) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+H=M3[,grep("Country|S_57_7",names(M3)),with =F]
+names(H)<-c("Country","Other")
+H[,Other:=gsub("n|non|none","nothing",Other)]
+H %>% drop_na() %>% group_by(Other) %>% count() %>% kable()
+
+#x1 %>% group_by(Country) %>% count()
+```
+
+# 58	Does your group sometimes not follow the rules? Can you give examples?
+
+
+```{r,fig.height=10,fig.width=10}
+library("tm")
+library("SnowballC")
+library("wordcloud")
+library("RColorBrewer")
+x1=M3[,grep("Country|Q_58",names(M3)),with =F]
+names(x1)<-c("Country","Q_58")
+x1[,Q_58:=tolower(Q_58)]
+#x1[,Q_58:=gsub("b|n",NA,Q_58)]
+x1[,Q_58:=gsub("no|no it follow the rules|no we follow our rules|non|none|not really","no it follow rules",Q_58)]
+x1 %>% drop_na() %>% group_by(Q_58) %>% count() %>% kable()
+
+```
+```{r,fig.height=10,fig.width=10}
+# docs <- Corpus(VectorSource(x1$Q_58))
+# #inspect(docs)
+# toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+# docs <- tm_map(docs, toSpace, "/")
+# docs <- tm_map(docs, toSpace, "@")
+# docs <- tm_map(docs, toSpace, "\\|")
+# # Convert the text to lower case
+# docs <- tm_map(docs, content_transformer(tolower))
+# # Remove numbers
+# docs <- tm_map(docs, removeNumbers)
+# # Remove english common stopwords
+# docs <- tm_map(docs, removeWords, stopwords("english"))
+# # Remove your own stop word
+# # specify your stopwords as a character vector
+# docs <- tm_map(docs, removeWords, c("blabla1", "blabla2")) 
+# # Remove punctuations
+# docs <- tm_map(docs, removePunctuation)
+# # Eliminate extra white spaces
+# docs <- tm_map(docs, stripWhitespace)
+# # Text stemming
+# # docs <- tm_map(docs, stemDocument)
+# #inspect(docs)
+# library(RWeka)
+# BigramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min = 2, max = 2))
+# # ... other tokenizers
+# tok <- BigramTokenizer
+# tdmgram <- TermDocumentMatrix(docs, control = list(tokenize = tok))
+# dtm <- TermDocumentMatrix(docs)
+# m <- as.matrix(tdmgram)
+# v <- sort(rowSums(m),decreasing=TRUE)
+# d <- data.frame(word = names(v),freq=v)
+# #head(d, 10)
+# set.seed(1234)
+# 
+# print("Word cloud")
+# 
+# wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+#           max.words=1000, random.order=FALSE, rot.per=0.35, 
+#           colors=colors,main ="Word cloud ")#brewer.pal(8, "Dark2"),m
+# library(tau) 
+# library(data.table)
+# # given a string vector and size of ngrams this function returns     word ngrams with corresponding frequencies
+# createNgram <-function(stringVector, ngramSize){
+# 
+#   ngram <- data.table()
+# 
+#   ng <- textcnt(stringVector, method = "string", n=ngramSize, tolower = FALSE)
+# 
+#   if(ngramSize==1){
+#     ngram <- data.table(w1 = names(ng), freq = unclass(ng), length=nchar(names(ng)))  
+#   }
+#   else {
+#     ngram <- data.table(w1w2 = names(ng), freq = unclass(ng), length=nchar(names(ng)))
+#   }
+#   return(ngram)
+# }
+# res <- createNgram(docs, 2)
+# res<-res %>% arrange(freq)
+# 
+# print("2 word Phrase cloud")
+# 
+# wordcloud(words = res$w1w2, freq = res$freq, min.freq = 1,
+#           max.words=1000, random.order=FALSE, rot.per=0.35, 
+#           colors=colors,main ="Word cloud ")#brewer.pal(8, "Dark2"),mail)
+# #names(res)
+```
+
+# 59	Does the group have a policy to fine members for infractions to the rules?
+
+```{r}
+
+
+x1=M3[,grep("Country|Q_59",names(M3)),with =F]
+names(x1)<-c("Country","Q_59")
+x1[,value:=ifelse(Q_59==1,"Yes",ifelse(Q_59==2,"No",NA))]
+x1$value<-factor(x1$value,levels=c("Yes","No","Respondents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,value) %>% dcast(value~Country)
+rbind(B1,c("Respondents",colSums(B1[,c(2:3)],na.rm = T))) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#x1 %>% group_by(Country) %>% count()
+```
+
+# 60	In your observation, is that policy observed?	
+
+```{r}
+
+x1=M3[,grep("Country|Q_60",names(M3)),with =F][,c(1:2)]
+names(x1)<-c("Country","Q_60")
+x1[,value:=ifelse(Q_60==1,"Yes, rigorously",ifelse(Q_60==2,"Yes, some",ifelse(Q_60==3,"A bit",ifelse(Q_60==4,"Hardly at all",ifelse(Q_60==5,"Not at all",ifelse(Q_60==6,"Other(specify)",NA))))))]
+x1$value<-factor(x1$value,levels=c("Yes, rigorously","Yes, some","A bit","Hardly at all","Not at all","Other(specify)","Respondents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,value) %>% dcast(value~Country)
+rbind(B1,c("Respondents",colSums(B1[,c(2:3)],na.rm = T))) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#x1 %>% group_by(Country) %>% count()
+```
+
+# Q61	What are the acts that you saw fines being levied for?	(Multiple Selection)
+
+```{r}
+
+x1=M3[,grep("Country|A_61",names(M3)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","Talking during meeting","Late to meeting","Late repayment","Not saving","Arguments, saying bad things","Phone ringing during meeting","Other:")
+x1 <-melt(x1,id.vars='Country')
+x1$value[x1$value==-1]<-0
+#x1[,value:=ifelse(value==1,"Talking during meeting",ifelse(value==2,"Late to meeting",ifelse(value==3,"Late repayment",ifelse(value==4,"Not saving",ifelse(value==5,"Arguments, saying bad things",ifelse(value==6,"Phone ringing during meeting",ifelse(value==7,"Other:",NA)))))))]
+x1$variable<-factor(x1$variable,levels=c("Talking during meeting","Late to meeting","Late repayment","Not saving","Arguments, saying bad things","Phone ringing during meeting","Other:","Percentage","Respondents"))
+B1<-x1 %>% drop_na() %>% group_by(Country,variable) %>% dcast(variable~Country,fun =sum)
+rbind(B1,c("Respondents",152,136)) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#x1 %>% group_by(Country) %>% count()
+```
+
+# 62	WHICH OF THE FOLLOWING TYPE OF PEOPLE COULD BE MEMBER OF THIS GROUP: NOTE: YOU ARE ASKING IF THEY COULD BE, NOT IF THEY ARE.
+
+```{r,fig.width =10}
+
+x1=M3[,grep("Country|T_62",names(M3)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","Men","Women","Salaried people, like teachers or government workers","People with disabilities, like blind or lame",
+             "Young children still in school","People with bad reputation","Very old people who cannot work much anymore","People with a lot of debts",
+              "People with a different religion")
+x1 <-melt(x1,id.vars='Country')
+x1$value[x1$value==-1]<-0
+x1[,value:=ifelse(value==1,"Yes","No")]
+x1$value<-factor(x1$value,levels =c("Yes","No"))
+x1$variable<-factor(x1$variable,levels =c("Country","Men","Women","Salaried people, like teachers or government workers","People with disabilities, like blind or lame","Young children still in school","People with bad reputation","Very old people who cannot work much anymore","People with a lot of debts",              "People with a different religion"))
+x1 %>% drop_na() %>% ggplot(aes(x =variable,fill=value))+geom_bar()+scale_fill_manual(values=colors)+theme1+labs(title="WHICH OF THE FOLLOWING TYPE OF PEOPLE COULD BE \n MEMBER OF THIS GROUP:  \n SEEP-GM3-62")+coord_flip()+facet_wrap(~Country)
+```
+
+# Q63	What is the maximum number of members the group would agree to expand to?
+
+```{r}
+
+x1=M3[,grep("Country|Q_63",names(M3)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","Q_63")
+x1$ID<-1:308
+t<-x1 %>% arrange(Q_63)
+x1 %>% drop_na() %>% ggplot(aes(y=Q_63))+geom_boxplot(fill =j)+theme1+scale_fill_manual(values=colors)+labs(title ="What is the maximum number of members the group would agree to expand to? \n SEEP-GM3-63",y ="Members")+coord_cartesian(ylim =c(0,50))+scale_y_continuous(breaks =seq(0,50,5))+facet_wrap(~Country)
+x1$ID<-factor(x1$ID,levels =t$ID)
+x1[x1<0]<-NA
+M<-subset(x1,Country=="Mali")
+U<-subset(x1,Country=="Uganda")
+x<-M %>% drop_na() %>% ggplot(aes(x =ID,y =Q_63))+geom_bar(stat ='identity',fill =j)+theme1+scale_fill_manual(values=colors)+labs(title ="What is the maximum number of members the group would agree to expand to? \n SEEP-GM3-63",y ="Members")+coord_cartesian(ylim =c(0,50))+scale_y_continuous(breaks =seq(0,50,5))+facet_wrap(~Country)+theme(axis.text.x = element_blank())
+x
+x<-U %>% drop_na() %>%ggplot(aes(x =ID,y =Q_63))+geom_bar(stat ='identity',fill =j)+theme1+scale_fill_manual(values=colors)+labs(title ="What is the maximum number of members the group would agree to expand to? \n SEEP-GM3-63",y ="Members")+coord_cartesian(ylim =c(0,50))+scale_y_continuous(breaks =seq(0,50,5))+facet_wrap(~Country)+theme(axis.text.x = element_blank())
+x
+##(x)
+x1 %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# Q64	What types of records does the group have? (Multiple Selection)
+
+```{r}
+
+x1=M3[,grep("Country|A_64",names(M3)),with =F]#[,c(1:2)]
+
+names(x1)<-c("Country","Central ledger","Passbooks","Phone, tablet or computer","Other:")
+x1 <-melt(x1,id.vars='Country')
+x1$value[x1$value==-1]<-0
+#x1[,value:=ifelse(value==1,"Central ledger",ifelse(value==2,"Passbooks",ifelse(value==3,"Phone, tablet or computer",ifelse(value==4,"Other:",NA))))]
+x1$variable<-factor(x1$variable,levels=c("Central ledger","Passbooks","Phone, tablet or computer","Other:","Percentage","Respondents"))
+B1<-x1 %>% drop_na() %>% group_by(Country,variable) %>% dcast(variable~Country,fun =sum)
+rbind(B1,c("Respondents",152,136)) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+
+```
+
+# Q66	What is recorded? (Multiple Selection)
+
+
+```{r}
+
+x1=M3[,grep("Country|T_66",names(M3)),with =F]#[,c(1:2)]
+x=M3[,grep("Country|T_66",names(M3)),with =F]
+names(x1)<-c('Country','Meeting attendance','Balance of the loan fund','Balance of the social fund',"Individual members' savings (per meeting)","Individual members' loan outstanding","Individual members' contributions to social fund")
+x1<-melt(x1,id.vars ="Country")
+x1[,Value:=ifelse(value==1,"Yes",ifelse(value==2,"No",NA))]
+x1$Value<-factor(x1$Value,levels=c("Yes","No"))
+x1$variable<-factor(x1$variable,levels =c('Meeting attendance','Balance of the loan fund','Balance of the social fund',"Individual members' savings (per meeting)","Individual members' loan outstanding","Individual members' contributions to social fund"))
+x1 %>% drop_na() %>% ggplot(aes(x =variable,fill =Value))+geom_bar(position ="fill")+theme1+scale_fill_manual(values=colors)+labs(title ="What is recorded? \n SEEP-GM3-66",y ="Count")+coord_flip() +facet_wrap(~Country)#+coord_cartesian(ylim =c(0,50))+scale_y_continuous(breaks =seq(0,50,5))
+x[,1:2] %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# 67	Is it possible to determine by simply looking at the records:
+
+
+```{r}
+
+x1=M3[,grep("Country|T_67",names(M3)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","Amount owed by each member","Amount saved by each member","Amount of interest on each loan")
+x1<-melt(x1,id.vars ="Country")
+x1[,Value:=ifelse(value==1,"Yes",ifelse(value==2,"No",NA))]
+x1$Value<-factor(x1$Value,levels=c("Yes","No"))
+x1$variable<-factor(x1$variable,levels =c("Amount owed by each member","Amount saved by each member","Amount of interest on each loan"))
+x1 %>% drop_na() %>% ggplot(aes(x =variable,fill =Value))+geom_bar(position ="fill")+theme1+scale_fill_manual(values=colors)+labs(title ="Is it possible to determine by simply looking at the records: \n SEEP-GM3-67",y ="Count")+coord_flip() +facet_wrap(~Country)#+coord_cartesian(ylim =c(0,50))+scale_y_continuous(breaks =seq(0,50,5))
+x=M3[,grep("Country|T_67",names(M3)),with =F]#[,c(1:2)]
+x[,1:2] %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# Q68	Who keeps the passbooks between meetings?	
+
+```{r}
+
+x1=M3[,grep("Country|Q_68",names(M3)),with =F][,c(1:2)]
+#x1 <-melt(x1,id.vars='Country')
+names(x1)<-c("Country","Q_68")
+x1[,value:=ifelse(Q_68==1,"Members themselves keep it",ifelse(Q_68==2,"Kept in the box or bag for money",ifelse(Q_68==3,"Other place (specify)",ifelse(Q_68==4,"No passbooks",NA))))]
+x1$value<-factor(x1$value,levels=c("Members themselves keep it","Kept in the box or bag for money","Other place (specify)","No passbooks","Percentage","Respondents"))
+B1<-x1 %>% drop_na() %>% group_by(Country,value) %>% dcast(value~Country)
+rbind(B1,c("Respondents",colSums(B1[,c(2:3)],na.rm = T))) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#x1 %>% g
+```
+
+# Q69	Did any person at the group-meeting spot any errors in the bookkeeping, from this week or previous meetings
+
+```{r}
+
+x1=M3[,grep("Country|Q_69",names(M3)),with =F][,c(1:2)]
+#x1 <-melt(x1,id.vars='Country')
+names(x1)<-c("Country","Q_69")
+x1[,value:=ifelse(Q_69==1,"Yes",ifelse(Q_69==2,"No",NA))]
+x1$value<-factor(x1$value,levels=c("Yes","No"))
+B1<-x1 %>% drop_na() %>% group_by(Country,value) %>% dcast(value~Country)
+rbind(B1,c("Respondents",colSums(B1[,c(2:3)],na.rm = T))) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#x1 %>% g
+```
+
+# Q70	please describe the errors that you found?	
+
+```{r,fig.height=10,fig.width=10}
+
+x1=M3[,grep("Country|70",names(M3)),with =F]
+names(x1)<-c("Country","Others")
+x1[x1$Others==-1]<-NA
+x1[,Others:=tolower(Others)]
+x1 %>% drop_na() %>% group_by(Others) %>%  count() %>% kable()
+
+```
+```{r}
+# docs <- Corpus(VectorSource(x1$Q_70))
+# #inspect(docs)
+# toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+# docs <- tm_map(docs, toSpace, "/")
+# docs <- tm_map(docs, toSpace, "@")
+# docs <- tm_map(docs, toSpace, "\\|")
+# # Convert the text to lower case
+# docs <- tm_map(docs, content_transformer(tolower))
+# # Remove numbers
+# docs <- tm_map(docs, removeNumbers)
+# # Remove english common stopwords
+# docs <- tm_map(docs, removeWords, stopwords("english"))
+# # Remove your own stop word
+# # specify your stopwords as a character vector
+# docs <- tm_map(docs, removeWords, c("blabla1", "blabla2")) 
+# # Remove punctuations
+# docs <- tm_map(docs, removePunctuation)
+# # Eliminate extra white spaces
+# docs <- tm_map(docs, stripWhitespace)
+# # Text stemming
+# # docs <- tm_map(docs, stemDocument)
+# #inspect(docs)
+# library(RWeka)
+# BigramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min = 2, max = 2))
+# # ... other tokenizers
+# tok <- BigramTokenizer
+# tdmgram <- TermDocumentMatrix(docs, control = list(tokenize = tok))
+# dtm <- TermDocumentMatrix(docs)
+# m <- as.matrix(tdmgram)
+# v <- sort(rowSums(m),decreasing=TRUE)
+# d <- data.frame(word = names(v),freq=v)
+# #head(d, 10)
+# set.seed(1234)
+# 
+# print("Word cloud")
+# 
+# wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+#           max.words=1000, random.order=FALSE, rot.per=0.35, 
+#           colors=colors,main ="Word cloud ")#brewer.pal(8, "Dark2"),mail)
+# # res <- createNgram(docs, 2)
+# # res<-res %>% arrange(freq)
+# # 
+# # print("2 word Phrase cloud")
+# # 
+# # wordcloud(words = res$w1w2, freq = res$freq, min.freq = 1,
+# #           max.words=1000, random.order=FALSE, rot.per=0.35, 
+# #           colors=colors,main ="Word cloud ")#brewer.pal(8, "Dark2"),mail)
+```
+
+
+# Q71	Did you spot any errors in the bookkeeping when you looked at the records?	
+
+```{r}
+
+x1=M3[,grep("Country|Q_71",names(M3)),with =F][,c(1:2)]
+#x1 <-melt(x1,id.vars='Country')
+names(x1)<-c("Country","Q_71")
+x1[,value:=ifelse(Q_71==1,"Yes",ifelse(Q_71==2,"No",NA))]
+x1$value<-factor(x1$value,levels=c("Yes","No","Respondents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,value) %>% dcast(value~Country)
+rbind(B1,c("Respondents",colSums(B1[,c(2:3)],na.rm = T))) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#x1 %>% g
+```
+
+# Q72	How often does your group meet?	
+
+```{r}
+
+x1=M3[,grep("Country|Q_73",names(M3)),with =F][,c(1:2)]
+names(x1)<-c("Country","Q_73")
+x1[,value:=ifelse(Q_73==1,"Daily",ifelse(Q_73==2,"Weekly",ifelse(Q_73==3,"Every 2 weeks",ifelse(Q_73==4,"Monthly",ifelse(Q_73==5,"It is not regular",ifelse(Q_73==6,"Other (specify)",ifelse(Q_73==7,"I don’t know",NA)))))))]
+x1$value<-factor(x1$value,levels=c("Daily","Weekly","Every 2 weeks","Monthly","It is not regular","Other (specify)","I don’t know","Respondents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,value) %>% dcast(value~Country)
+rbind(B1,c("Respondents",colSums(B1[,c(2:3)],na.rm = T))) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#x1 %>% g
+```
+
+# Q73	Does your group have loan meetings and meetings where no loans are given (savings meetings)?
+
+```{r}
+
+x1=M3[,grep("Country|Q_73",names(M3)),with =F][,c(1:2)]
+names(x1)<-c("Country","Q_73")
+x1[,value:=ifelse(Q_73==1,"Yes, only in some meetings can you get a loan,all meetings do savings",ifelse(Q_73==2,"No, in all meetings we do both savings and loans",ifelse(Q_73==3,"Other (specify)",NA)))]
+x1$value<-factor(x1$value,levels=c("Yes, only in some meetings can you get a loan,all meetings do savings","No, in all meetings we do both savings and loans","Other (specify)","Percentage","Respondents"))
+B1<-x1 %>% drop_na() %>% group_by(Country,value) %>% dcast(value~Country)
+rbind(B1,c("Respondents",colSums(B1[,c(2:3)],na.rm = T))) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#x1 %>% g
+```
+
+# Q74	How long does a group meeting typically last? (Mutiple Selection)
+
+```{r,fig.width =9}
+x1=M3[,grep("Country|T_74",names(M3)),with =F]#[,c(1:2)]
+H <-copy(x1)
+H[H==-1]<-NA
+names(x1)<-c("Country","savings meeting","loan meeting")
+x1$ID<-1:308
+t =copy(x1)
+t$tt<-rowSums(x1[,2:3])
+y<-t %>% arrange(tt)
+x1$ID<-factor(x1$ID,levels= y$ID)
+x1<-melt(x1,id.vars=c("Country","ID"))
+x1[,value:=ifelse(value==-1,NA,value)]
+x1$variable<-factor(x1$variable,levels=c("savings meeting","loan meeting"))
+U<-subset(x1,Country=="Uganda")
+M<-subset(x1,Country=="Mali")
+x1 %>% ggplot(aes(x=variable,y=value))+geom_boxplot(fill =colors[1])+facet_wrap(~Country)+labs(title ="How long does a group meeting typically last? \n SEEP-GM3-74",y ="Minutes")+scale_y_continuous(breaks =seq(0,100,10))+theme1+scale_fill_manual(values=colors)+coord_flip()
+g<-U %>% drop_na() %>% ggplot(aes(x =ID,y =value,fill =variable))+geom_bar(stat ='identity')+facet_wrap(~Country)+labs(title ="How long does a group meeting typically last? \n SEEP-GM3-74",y ="Minutes")+scale_y_continuous(breaks =seq(0,200,20))+theme1+scale_fill_manual(values=colors)+theme(axis.text.x = element_blank())
+g
+##(g)
+g<-M %>% drop_na() %>% ggplot(aes(x =ID,y =value,fill =variable))+geom_bar(stat ='identity')+facet_wrap(~Country)+labs(title ="How long does a group meeting typically last? \n SEEP-GM3-74",y ="Minutes")+scale_y_continuous(breaks =seq(0,200,20))+theme1+scale_fill_manual(values=colors)+theme(axis.text.x = element_blank())
+g
+H%>% drop_na() %>% group_by(Country) %>% count() %>% kable()
+```
+
+# 75	How long does a group meeting typically last?
+
+```{r,fig.width =9}
+x1=M3[,grep("Country|75",names(M3)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","Q_75")
+x1$ID<-1:308
+t<-x1 %>% arrange(Q_75)
+x1$ID<-factor(x1$ID,levels =t$ID)
+U<-subset(x1,Country=="Uganda")
+M<-subset(x1,Country=="Mali")
+g<-U %>% drop_na() %>% ggplot(aes(x =ID,y =Q_75))+geom_bar(stat ='identity',fill =colors[1])+facet_wrap(~Country)+labs(title ="How long does a group meeting typically last? \n SEEP-GM3-75",y ="Minutes")+scale_y_continuous(breaks =seq(0,200,10))+theme1+scale_fill_manual(values=colors)+theme(axis.text.x = element_blank())
+g
+g<-M %>% drop_na() %>% ggplot(aes(x =ID,y =Q_75))+geom_bar(stat ='identity',fill =colors[1])+facet_wrap(~Country)+labs(title ="How long does a group meeting typically last? \n SEEP-GM3-75",y ="Minutes")+scale_y_continuous(breaks =seq(0,200,10))+theme1+scale_fill_manual(values=colors)+theme(axis.text.x = element_blank())
+g
+##(g)
+```
+
+#  76	Does your group periodically distribute - or share out - its funds among the members?
+
+```{r}
+x1=M3[,grep("Country|76",names(M3)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","Q_76")
+x1[,Q_76:=ifelse(Q_76 ==1,"Yes, we share out (some or all)",ifelse(Q_76==2,"No, we dont share out",ifelse(Q_76==3,"I don't know",NA)))]
+x1$Q_76<-factor(x1$Q_76,levels=c("Yes, we share out (some or all)","No, we dont share out","I don't know","Respondents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,Q_76) %>% dcast(Q_76~Country)
+rbind(B1,c("Respondents",152,136)) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+
+```
+
+# 77	How many share outs do you remember?
+
+```{r,fig.width =9}
+x1=M3[,grep("Country|77",names(M3)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","Q_77")
+x1$ID<-1:308
+x1[x1==-1]<-NA
+t<-x1 %>% arrange(Q_77)
+x1$ID<-factor(x1$ID,levels =t$ID)
+U<-subset(x1,Country=="Uganda")
+M<-subset(x1,Country=="Mali")
+g<-U %>% drop_na() %>% ggplot(aes(x =ID,y =Q_77))+geom_bar(stat ='identity',fill =colors[1])+facet_wrap(~Country)+labs(title ="How many share outs do you remember? \n SEEP-GM3-77",y ="Number",x ="Groups")+scale_y_continuous(breaks =seq(0,200,1))+theme1+scale_fill_manual(values=colors)+theme(axis.text.x = element_blank())
+g
+g<-M %>% drop_na() %>% ggplot(aes(x =ID,y =Q_77))+geom_bar(stat ='identity',fill =colors[1])+facet_wrap(~Country)+labs(title ="How many share outs do you remember? \n SEEP-GM3-77",y ="Number",x ="Groups")+scale_y_continuous(breaks =seq(0,200,1))+theme1+scale_fill_manual(values=colors)+theme(axis.text.x = element_blank())
+g
+##(g)
+```
+
+# 78	When was the most recent share out?
+
+```{r,fig.width =9}
+x1=M3[,grep("Country|78",names(M3)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","Q_78")
+x1$ID<-1:308
+x1[x1==-1]<-NA
+x1[,days:=difftime(today,Q_78)]
+x1[,days:=ifelse(days>10000,NA,days)]
+
+g<-x1 %>%drop_na() %>% ggplot(aes(,y =Q_78))+geom_boxplot(fill =j)+coord_flip()+labs(title ="When was the most recent share out?",y ="Last Share Out")+facet_wrap(~Country)+theme1+scale_fill_manual(values =colors)+facet_grid(rows=vars(Country))
+g
+#(g)
+x1 %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# 79	What was the total amount of the last share out?
+
+
+```{r,fig.width =9}
+x1=M3[,grep("Country|79",names(M3)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","Q_79")
+x1$ID<-1:308
+x1[x1==-1]<-NA
+t<-x1 %>% arrange(Q_79)
+x1$ID<-factor(x1$ID,levels =t$ID)
+x1[,Q_79:=ifelse(Country=="Uganda",Q_79/ug,Q_79/ml)]
+x1[,Q_79:=ifelse(Q_79>10000,NA,Q_79)]
+g<-x1 %>% drop_na() %>% ggplot(aes(x =ID,y =Q_79))+geom_bar(stat ='identity',fill =colors[1])+facet_wrap(~Country)+labs(title ="What was the total amount of the last share out? \n SEEP-GM3-79",y ="Amount in Dollars",x ="Groups")+theme1+scale_fill_manual(values=colors)+theme(axis.text.x = element_blank())+scale_y_continuous(breaks =seq(0,10000,500))
+g
+#(g)
+x1 %>% drop_na() %>% group_by(Country) %>% count() %>% kable()
+```
+
+# 80	How many members participated in the share out?	
+
+```{r,fig.width =9}
+x1=M3[,grep("Country|80",names(M3)),with =F]#[,c(1:2)]
+x1[x1==-1]<-NA
+x1$Mean<-rowMeans(x1[,2:9],na.rm=T)
+x1<-x1[,c(1,10)]
+names(x1)<-c("Country","Q_80")
+x1$ID<-1:308
+x1[x1==-1]<-NA
+t<-x1 %>% arrange(Q_80)
+x1$ID<-factor(x1$ID,levels =t$ID)
+#x1[,Q_79:=ifelse(Country=="Uganda",Q_79/ug,Q_79/ml)]
+#x1[,Q_79:=ifelse(Q_79>10000,NA,Q_79)]
+U<-subset(x1,Country=="Uganda")
+M<-subset(x1,Country=="Mali")
+g<-U %>% drop_na() %>% ggplot(aes(x =ID,y =Q_80))+geom_bar(stat ='identity',fill =colors[1])+facet_wrap(~Country)+labs(title ="How many members participated in the share out? \n SEEP-GM3-80",y ="Members",x ="Groups")+theme1+scale_fill_manual(values=colors)+theme(axis.text.x = element_blank())+scale_y_continuous(breaks =seq(0,10000,5))
+g
+g<-M %>% drop_na() %>% ggplot(aes(x =ID,y =Q_80))+geom_bar(stat ='identity',fill =colors[1])+facet_wrap(~Country)+labs(title ="How many members participated in the share out? \n SEEP-GM3-80",y ="Members",x ="Groups")+theme1+scale_fill_manual(values=colors)+theme(axis.text.x = element_blank())+scale_y_continuous(breaks =seq(0,10000,5))
+g
+##(g)
+x1 %>% drop_na() %>% group_by(Country) %>% count() %>% kable()
+```
+
+# 81	Were there any members who could not repay all their loans at share out?	
+
+```{r}
+
+x1=M3[,grep("Country|81",names(M3)),with =F][,c(1:2)]
+#x1 <-melt(x1,id.vars='Country')
+names(x1)<-c("Country","Q_81")
+x1[,value:=ifelse(Q_81==1,"Yes",ifelse(Q_81==2,"No",ifelse(Q_81==3,"Dont Know",NA)))]
+x1$value<-factor(x1$value,levels=c("Yes","No","Dont Know","Respondents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,value) %>% dcast(value~Country)
+rbind(B1,c("Respondents",colSums(B1[,c(2:3)],na.rm = T))) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#x1 %>% g
+```
+
+# 82	How much was not paid back?	
+
+```{r,fig.width =9}
+x1=M3[,grep("Country|82",names(M3)),with =F]#[,c(1:2)]
+x1[x1==-1]<-NA
+x1$mean<-rowMeans(x1[,2:9],na.rm = T)
+x1<-x1[,c(1,10)]
+names(x1)<-c("Country","Q_82")
+x1$ID<-1:308
+x1[x1==-1]<-NA
+t<-x1 %>% arrange(Q_82)
+x1$ID<-factor(x1$ID,levels =t$ID)
+x1[,Q_82:=ifelse(Country=="Uganda",Q_82/ug,Q_82/ml)]
+x1[,Q_82:=ifelse(Q_82>10000,NA,Q_82)]
+g<-x1 %>% drop_na() %>% ggplot(aes(x =ID,y =Q_82))+geom_bar(stat ='identity',fill =colors[1])+facet_wrap(~Country)+labs(title ="How much was not paid back?	? \n SEEP-GM3-82",y ="Amount in Dollars",x ="Groups")+theme1+scale_fill_manual(values=colors)+theme(axis.text.x = element_blank())+scale_y_continuous(breaks =seq(0,10000,200))
+g
+#(g)
+x1 %>% drop_na() %>% group_by(Country) %>% count() %>% kable()
+```
+
+# 83	What happened? Could the group resolve the issue and if so, how?	
+
+```{r,fig.width =9}
+x1=M3[,grep("Country|83",names(M3)),with =F]#[,c(1:2)]
+x1[x1==-1]<-NA
+melt(x1,id.vars ='Country') %>% drop_na() %>%group_by(value) %>% count() %>%  kable()
+
+```
+
+# 84	Thank you. Then, the share out before that one – can you remember it? What was the date?	Don't know
+
+```{r,fig.width =9}
+x1=M3[,grep("Country|84",names(M3)),with =F]#[,c(1:2)]
+x1<-melt(x1,id.vars ="Country")
+#names(x1)<-c("Country","Q_84")
+#x1$ID<-1:308
+x1[x1==-1]<-NA
+x1[,days:=difftime(today,value)]
+x1[,days:=ifelse(days>10000,NA,days)]
+
+g<-x1 %>%drop_na() %>% ggplot(aes(,y =value))+geom_boxplot(fill =j)+coord_flip()+labs(title ="Then, the share out before that one – can you remember it? What was the date?",y ="Last Share Out")+facet_wrap(~Country)+theme1+scale_fill_manual(values =colors)+facet_grid(rows=vars(Country))
+g
+##(g)
+x1 %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+
+
+# Q85	What are other opportunities motivations for joining SFC (Uganda: VSLA) group apart from savings?	(Multiple Selection)
+
+
+```{r}
+x1=M3[,grep("Country|A_85",names(M3)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","Social/being with friends","Learning skills","Organizing women to be strong together","Possibility to get loan","Possibility to do a business as a group","Selling goods to others","Other (specify)")
+x1<-melt(x1,id.vars="Country")
+#x1[,value:=ifelse(value==1,"Social/being with friends",ifelse(value==2,"Learning skills",ifelse(value==3,"Organizing women to be strong together",ifelse(value==4,"Possibility to get loan",ifelse(value==5,"Possibility to do a business as a group",ifelse(value==6,"Selling goods to others",ifelse(value==7,"Other (specify)",NA)))))))]
+x1$variable<-factor(x1$variable,levels=c("Social/being with friends","Learning skills","Organizing women to be strong together","Possibility to get loan","Possibility to do a business as a group","Selling goods to others","Other (specify)","Respondents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,variable) %>% dcast(variable~Country,fun =sum)
+rbind(B1,c("Respondents",152,136)) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+
+```
+
+# Q86	How have members livelihood changed as a result of being an SFC (Uganda VSLA) member? How? (Multiple Selection)
+
+```{r}
+x1=M3[,grep("Country|A_86",names(M3)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","They have more income","They have less income","They have more possessions","They have less possessions","They have more businesses","They have less businesses","They have smoother finances","They have more spiky finances","Other (specify)")
+x1<-melt(x1,id.vars="Country")
+#x1[,value:=ifelse(value==1,"They have more income",ifelse(value==2,"They have less income",ifelse(value==3,"They have more possessions",ifelse(value==4,"They have less possessions",ifelse(value==5,"They have more businesses",ifelse(value==6,"They have less businesses",ifelse(value==7,"They have smoother finances",ifelse(value==8,"They have more spiky finances",ifelse(value==9,"Other (specify)",NA)))))))))]
+x1$variable<-factor(x1$variable,levels=c("They have more income","They have less income","They have more possessions","They have less possessions","They have more businesses","They have less businesses","They have smoother finances","They have more spiky finances","Other (specify)","Respondents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,variable) %>% dcast(variable~Country,fun =sum)
+rbind(B1,c("Respondents",152,136)) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# Q87	Are VSLAs used as a platform for other interventions in the communities? What are they?	(Multiple Selection)
+
+
+```{r}
+x1=M3[,grep("Country|A_87",names(M3)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","For selling/buying to each other","For selling in bulk","For joint business","For learning economic skills","For learning about nutritioin","For learning about health","For learning about finance","For organizing politically","For fighting for women’s rights","Other (specify)")
+x1<-melt(x1,id.vars="Country")
+#x1[,value:=ifelse(value==1,"For selling/buying to each other",ifelse(value==2,"For selling in bulk",ifelse(value==3,"For joint business",ifelse(value==4,"For learning economic skills",ifelse(value==5,"For learning about nutritioin",ifelse(value==6,"For learning about health",ifelse(value==7,"For learning about finance",ifelse(value==8,"For organizing politically",ifelse(value==9,"For fighting for women’s rights",ifelse(value==10,"Other (specify)",NA))))))))))]
+x1$variable<-factor(x1$variable,levels=c("For selling/buying to each other","For selling in bulk","For joint business","For learning economic skills","For learning about nutritioin","For learning about health","For learning about finance","For organizing politically","For fighting for women’s rights","Other (specify)","Respondents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,variable) %>% dcast(variable~Country,fun =sum)
+rbind(B1,c("Respondents",152,136)) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# Q88	How does to the community view members of SFC (Uganda: VSLA)?
+
+
+
+```{r,fig.height=10,fig.width=10}
+x1=M3[,grep("Country|Q_88",names(M3)),with =F]#[,c(1:2)]
+names(x1)<-c("Country","Q_88")
+x1[,Q_88:=tolower(Q_88)]
+x1 %>% drop_na() %>% group_by(Q_88) %>% count() %>% kable()
+
+```
+```{r}
+# docs <- Corpus(VectorSource(x1$Q_88))
+# #inspect(docs)
+# toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+# docs <- tm_map(docs, toSpace, "/")
+# docs <- tm_map(docs, toSpace, "@")
+# docs <- tm_map(docs, toSpace, "\\|")
+# # Convert the text to lower case
+# docs <- tm_map(docs, content_transformer(tolower))
+# # Remove numbers
+# docs <- tm_map(docs, removeNumbers)
+# # Remove english common stopwords
+# docs <- tm_map(docs, removeWords, stopwords("english"))
+# # Remove your own stop word
+# # specify your stopwords as a character vector
+# docs <- tm_map(docs, removeWords, c("blabla1", "blabla2")) 
+# # Remove punctuations
+# docs <- tm_map(docs, removePunctuation)
+# # Eliminate extra white spaces
+# docs <- tm_map(docs, stripWhitespace)
+# # Text stemming
+# # docs <- tm_map(docs, stemDocument)
+# #inspect(docs)
+# library(RWeka)
+# BigramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min = 2, max = 2))
+# # ... other tokenizers
+# tok <- BigramTokenizer
+# tdmgram <- TermDocumentMatrix(docs, control = list(tokenize = tok))
+# dtm <- TermDocumentMatrix(docs)
+# m <- as.matrix(tdmgram)
+# v <- sort(rowSums(m),decreasing=TRUE)
+# d <- data.frame(word = names(v),freq=v)
+# head(d, 10)
+# set.seed(1234)
+# 
+# print("Word cloud")
+# 
+# wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+#           max.words=1000, random.order=FALSE, rot.per=0.35, 
+#           colors=colors,main ="Word cloud ")#brewer.pal(8, "Dark2"),mail)
+#  res <- createNgram(docs, 2)
+# res<-res %>% arrange(freq)
+# 
+# print("2 word Phrase cloud")
+# 
+# wordcloud(words = res$w1w2, freq = res$freq, min.freq = 1,
+#           max.words=1000, random.order=FALSE, rot.per=0.35,
+#           colors=colors,main ="Word cloud ")#brewer.pal(8, "Dark2"),mail)
+```
+
+```

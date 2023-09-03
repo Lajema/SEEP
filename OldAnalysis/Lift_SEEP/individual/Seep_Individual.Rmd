@@ -1,0 +1,518 @@
+---
+title: "Seep Individual Interviews"
+author: "John Kamau"
+date: "28/06/2019"
+output:
+  word_document: default
+  html_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,fig.width = 10,fig.height = 7)
+options(scipen=999)
+```
+
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(data.table)
+library(knitr)
+
+combined <- read_excel("D:/Kamau Lift/SEEP/combined.xlsx")
+df<-combined[,grep("Country|^ID$|INDIVUDUAL",names(combined))]
+
+setDT(df)
+
+X =data.table(names(df))
+X[,cleaned:=gsub("SEEP_INDIVUDUAL ONE_|SEEP_INDIVUDUAL TWO_|SEEP_INDIVUDUAL THREE_|SEEP_INDIVUDUAL FOUR_","",V1)]
+#view(head(X))
+names(df)<-X$cleaned
+setDT(df)
+
+```
+```{r}
+df$Longitude <-as.numeric(df$Longitude)
+df$Latitude <-as.numeric(df$Latitude)
+library(leaflet)
+uganda<-df[Country=="Uganda"]
+mali <-df[Country=="Mali"]
+ug <-leaflet()%>%addTiles()%>%
+  addMarkers(lat=uganda$Latitude,lng = uganda$Longitude,popup = uganda$GroupName)
+ml <-leaflet()%>%addTiles()%>%
+  addMarkers(lat=mali$Latitude,lng = mali$Longitude,popup = mali$GroupName)#%>%addPopups(lat=mali$Latitude,lng = mali$Longitude,popup = mali$GroupName)
+#ug
+#ml
+
+```
+
+<!-- # Administrative variables ( Values in Median) -->
+
+<!-- ```{r} -->
+<!-- adm <- df[,grep("Country|Interest_Rate|MembersInPresent|No_of_loans_outstanding|No_of_members_attending_meeting|Share_Value|No_of_members_attending_meeting -->
+<!-- |OriginalMembers",names(df)),with =F] -->
+<!-- adm[adm$Country=="-"]<-NA -->
+<!-- adm.melt <-melt(adm,id.vars="Country") -->
+<!-- adm.melt$value <-as.numeric(adm.melt$value) -->
+<!-- tb <- adm.melt%>%drop_na()%>%group_by(Country,variable)%>%summarise(Median =median(value,na.rm = T))%>%dcast(variable~Country,na.rm=T)#%>%kable() -->
+<!-- #adm.melt%>%drop_na()%>%group_by(Country,variable)%>%count()%>%dcast(variable~Country) -->
+<!-- #tb["Respondents",] <-  c(1,534,625) -->
+<!-- tb%>%kable() -->
+<!-- ``` -->
+
+# 3. How would you describe your position in the group
+
+```{r}
+library(janitor)
+dt <- df[,grep("Country|Q_3$",names(df)),with=F]
+staker<-function(){
+    Y<-rbind(dt[,c(1,2)],dt[,c(1,3)],use.names=FALSE)
+    Y<-rbind(Y,dt[,c(1,4)],use.names=FALSE)
+  Y<-rbind(Y,dt[,c(1,5)],use.names=FALSE)
+  
+}
+q3<-staker()
+q3[,position_in_group:=ifelse(Q_3==1,"Chairperson",ifelse(Q_3==2,"Record Keeper",ifelse(Q_3==3,"Box-keeper",ifelse(Q_3==4,"Money Counter",ifelse(Q_3==5,"Key holder",ifelse(Q_3==6,"General member",NA))))))]
+q3$position_in_group <- factor(q3$position_in_group,levels = c("Chairperson","Record Keeper","Box-keeper","Money Counter","Key holder","General member","Respondents","Percentage"))
+q3[q3$Country=="-"]<-NA
+B <- q3%>%drop_na()%>%group_by(Country,position_in_group)%>%count() %>% dcast(position_in_group~Country)
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+#q3%>%drop_na()%>%group_by(Country)%>%count()
+```
+
+# 4.How long have you been with this group?
+
+```{r}
+today <- "2019/06/28"
+dt <- df[,grep("Country|Q_4$",names(df)),with=F]
+q4<-staker()
+q4[q4$Country=="-"]<-NA
+q4$today =today
+q4[,years:=difftime(today,Q_4,unit ="days")]
+q4[,years1:=round(years/365.25)]
+q4[,years2:=ifelse(years1<50,years1,NA)]
+q4[,Years_in_Group:=ifelse(years2<1,"Less than 1 year",ifelse(years2<6,"1-5 years",ifelse(years2<11,"5-10 years",ifelse(years2<16,"10-15years","Above 16 years"))))]
+q4$Years_in_Group <- factor(q4$Years_in_Group,levels = c("Less than 1 year","1-5 years","5-10 years","10-15years","Above 16 years","Respondents","Percentage"))
+K<-q4[,c(1,7)]%>%drop_na()%>%group_by(Country,Years_in_Group)%>%count()%>%dcast(Years_in_Group~Country)# 
+rbind(K,c("Respondents",colSums(K[,c(2:3)],na.rm =T)))%>%kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+
+```
+
+# 5.How many VSLAs are you a member of, including this group?	
+
+```{r}
+dt <- df[,grep("Country|Q_5$",names(df)),with=F]
+q5<- staker()
+q5[q5$Country=="-"]<-NA
+q5[,Member:=ifelse(Q_5==1,"1 (only this group)",ifelse(Q_5==2,"2 groups (one other apart from this group)",ifelse(Q_5==3,"3 groups",ifelse(Q_5==4,"4 groups",ifelse(Q_5==5,"5 or more",ifelse(Q_5==6,"I don’t want to say",NA))))))]
+
+K <- q5%>%drop_na()%>%group_by(Country,Member)%>%count()%>%dcast(Member~Country)
+rbind(K,c("Respondents",colSums(K[,c(2:3)],na.rm =T)))%>%kable()
+
+per <- K%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# 6. Why are you member of several groups? (Multiple Selection)
+
+```{r}
+dt <- df[,grep("Country|A_6",names(df)),with=F]
+clean <- function(df){
+  df[df==-1]<-NA
+    return(df)
+  
+}
+G1<-dt[,c(1:8)]
+G2<-dt[,c(1,9:15)]
+G3<-dt[,c(1,16:22)]
+G4<-dt[,c(1,23:29)]
+Y<-rbind(G1,G2,use.names=FALSE)
+Y<-rbind(Y,G3,use.names=FALSE)
+Y<-rbind(Y,G4,use.names=FALSE)
+q6<-Y
+q6[q6$Country=="-"]<-NA
+names(q6)<-c("Country","To be allowed to save more","To access more loans","To have my money spread, so less risk","To enjoy the different meetings and company of all the members","To learn more","Other (specify)","I don’t want to say")
+q6<-clean(q6)
+q6.melt <-melt(q6,id.vars ="Country")
+#q6.melt[,Reason:=ifelse(value==1,"To be allowed to save more",ifelse(value==2,"To access more loans",ifelse(value==3,"To have my money spread, so less risk",ifelse(value==4,"To enjoy the different meetings and company of all the members",ifelse(value==5,"To learn more",ifelse(value==6,"Other (specify)",ifelse(value==7,"I don’t want to say",NA)))))))]
+q6.melt$variable <- factor(q6.melt$variable,levels = c("To be allowed to save more","To access more loans","To have my money spread, so less risk","To enjoy the different meetings and company of all the members","To learn more","Other (specify)","I don’t want to say","Respondents"))
+K <-q6.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+
+# colSums(K[,2:3],na.rm = T)
+# UG =data.frame(Reason =K$Reason, Yes =K$Uganda/300)
+# UG$No <- 1-UG$Yes
+# melt(UG,id.vars = "Reason")%>%ggplot(aes(x=Reason,y=value,fill = variable))+geom_bar(stat ='identity')+theme1+scale_fill_manual(values = colors)+theme(axis.text.x = element_text(angle =90))+coord_flip()
+rbind(K,c("Respondents",607,611))%>%kable()
+#q6[,1:2]%>%drop_na()%>%group_by(Country)%>%count()
+```
+
+# 7.How many VSLAs have you left in the past three years?	None
+
+```{r}
+dt <- df[,grep("Country|Q_7",names(df)),with=F]
+q7<-staker()
+q7[q7$Country=="-"]<-NA
+q7[,Groups_left:=ifelse(Q_7==1,"None",ifelse(Q_7==2,"1",ifelse(Q_7==3,"2",ifelse(Q_7==4,"3",ifelse(Q_7==5,"4 or more",NA)))))]
+#q6.melt[,c(1,4)]%>%drop_na()%>%group_by(Country,Groups_left)%>%count()%>%dcast(Groups_left~Country)%>%kable()
+q7$Groups_left <- factor(q7$Groups_left,levels =c('None','1','2','3',"4 or more","Respondents"))
+K<- q7%>%drop_na()%>%group_by(Country,Groups_left)%>%count()%>%dcast(Groups_left~Country)
+rbind(K,c("Respondents",colSums(K[,c(2:3)],na.rm =T)))%>%kable()
+
+per <- K%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# 8.What was the main reason for leaving the group(s)?	
+
+
+```{r}
+dt <- df[,grep("Country|Q_8$",names(df)),with=F]
+q8<-staker()
+q8[q8$Country=="-"]<-NA
+q8[,Reason:=ifelse(Q_8==1,"I no longer wanted to use savings group for saving (no fault of the saving group, my decision)",ifelse(Q_8==2,"I was in other VSLAs (I had too many)",ifelse(Q_8==3,"Bad performance/management of the group",ifelse(Q_8==4,"Conflict with other members",ifelse(Q_8==5,"I was expelled",ifelse(Q_8==6,"Other (specify)",ifelse(Q_8==7,"Doesn't want to answer",NA)))))))]
+q8$Reason <- factor(q8$Reason,levels = c("I no longer wanted to use savings group for saving (no fault of the saving group, my decision)","I was in other VSLAs (I had too many)","Bad performance/management of the group","Conflict with other members","I was expelled","Other (specify)","Doesn't want to answer","Respondents"))
+K<-q8[,c("Country","Reason")]%>%drop_na()%>%group_by(Country,Reason)%>%count()%>%dcast(Reason~Country)
+rbind(K,c("Respondents",colSums(K[,c(2:3)],na.rm =T)))%>%kable()
+
+per <- K%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# The Others file
+
+```{r}
+dt <- df[,grep("Country|Q_8_S$",names(df)),with=F]
+x =melt(dt,id.vars ="Country") %>% drop_na()
+x[,value:=tolower(value)]
+x[,value:=gsub("flaud","fraud",value)]
+x %>% group_by(value,Country) %>% count() %>% dcast(value~Country) %>% select(Mali,Uganda) %>%  kable()
+```
+
+
+# 9.How many savings groups have you (re)joined in the past 3 years?	None
+
+```{r}
+dt <- df[,grep("Country|Q_9$",names(df)),with=F]
+q9<-staker()
+q9[q9$Country=="-"]<-NA
+q9[,Groups_rejoined:=ifelse(Q_9==1,"None",ifelse(Q_9==2,"1",ifelse(Q_9==3,"2",ifelse(Q_9==4,"3",ifelse(Q_9==5,"4 or more",NA)))))]
+q9$Groups_rejoined<- factor(q9$Groups_rejoined,level =c('None','1','2','3',"4 or more","Respondents"))
+K <- q9%>%drop_na()%>%group_by(Country,Groups_rejoined)%>%count()%>%dcast(Groups_rejoined~Country)
+rbind(K,c("Respondents",colSums(K[,c(2:3)],na.rm =T)))%>%kable()
+
+per <- K%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# 10.What was the main reason for joining the saving group(s)?	
+
+```{r}
+dt <- df[,grep("Country|Q_10$",names(df)),with=F]
+q10<-staker()
+q10[q10$Country=="-"]<-NA
+q10[,Reason:=ifelse(Q_10==1,"I wanted to start saving again via a savings group",ifelse(Q_10==2,"I wanted an additional saving group to have more flexibility",ifelse(Q_10==3,"I found a very good group that I was happy about",ifelse(Q_10==4,"The savings group wanted me as a member (I was invited)",ifelse (Q_10==5,"Other (specify)",NA)))))]
+q10$Reason <-factor(q10$Reason,levels =c("I wanted to start saving again via a savings group","I wanted an additional saving group to have more flexibility","I found a very good group that I was happy about","The savings group wanted me as a member (I was invited)","Other (specify)","Respondents"))
+K <-q10[,c("Country","Reason")]%>%drop_na()%>%group_by(Country,Reason)%>%count()%>%dcast(Reason~Country)
+rbind(K,c("Respondents",colSums(K[,c(2:3)],na.rm =T)))%>%kable()
+per <- K%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# 11.Did you have an individual bank account when you joined the group?	
+
+```{r}
+dt <- df[,grep("Country|Q_11$",names(df)),with=F]
+q11 <-staker()
+q11[q11$Country=="-"]<-NA
+q11[,Bank_account:=ifelse(Q_11==1,"Yes",ifelse(Q_11==2,"No",NA))]
+q11$Bank_account<-factor(q11$Bank_account,levels =c('Yes','No',"Respondents"))
+K =q11%>%drop_na()%>%group_by(Country,Bank_account)%>%count()%>%dcast(Bank_account~Country)#%>%kable()
+rbind(K,c("Respondents",colSums(K[,c(2:3)],na.rm =T)))%>%kable()
+per <- K%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# 12.Do you currently have a bank-account?
+
+```{r}
+dt <- df[,grep("Country|Q_12$",names(df)),with=F]
+q11<-staker()
+q11[q11$Country=="-"]<-NA
+q11[,Bank_account:=ifelse(Q_12==1,"Yes",ifelse(Q_12==2,"No",NA))]
+q11$Bank_account <- factor(q11$Bank_account,levels = c('Yes','No',"Respondents"))
+K <- q11%>%drop_na()%>%group_by(Country,Bank_account)%>%count()%>%dcast(Bank_account~Country)
+rbind(K,c("Respondents",colSums(K[,c(2:3)],na.rm =T)))%>%kable()
+per <- K%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# 13.Do you use both your bank account and VSLA?	
+
+```{r}
+dt <- df[,grep("Country|Q_13$",names(df)),with=F]
+q13<-staker()
+q13[q13$Country=="-"]<-NA
+q13[,Account_Use:=ifelse(Q_13==1,"I use VSLA more but also bank account",ifelse(Q_13==2,"I use bank account more but also VSLA",ifelse(Q_13==3,"I use both equally",ifelse(Q_13==4,"I use only VSLA",ifelse(Q_13==5,"I use only bank account",ifelse(Q_13==6,"I use neither",ifelse(Q_13==7,"Doesn’t want to answer",NA)))))))]
+q13$Account_Use <-factor(q13$Account_Use,levels=c("I use VSLA more but also bank account","I use bank account more but also VSLA","I use both equally","I use only VSLA","I use only bank account","I use neither","Doesn’t want to answer","Respondents"))
+K <- q13%>%drop_na()%>%group_by(Country,Account_Use)%>%count()%>%dcast(Account_Use~Country)
+rbind(K,c("Respondents",colSums(K[,c(2:3)],na.rm =T)))%>%kable()
+per <- K%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+
+```
+
+# 14.Do you prefer to save in a VSLA or with your bank account?	
+
+```{r}
+dt<-df[,grep("Country|Q_14$",names(df)),with=F]
+q14<-staker()
+q14[q14$Country=="-"]<-NA
+q14[,Preference:=ifelse(Q_14==1,'Much prefer savings group',ifelse(Q_14==2,"Prefer savings group a little bit",ifelse(Q_14==3,"They are equally good",ifelse(Q_14==4,"Prefer bank account a little bit",ifelse(Q_14==5,"Much prefer bank account",ifelse(Q_14==6,"I don't know",NA))))))]
+q14$Preference <-factor(q14$Preference,levels =c('Much prefer savings group',"Prefer savings group a little bit","They are equally good","Prefer bank account a little bit","Much prefer bank account","I don't know","Respondents"))
+K <- q14%>%drop_na()%>%group_by(Country,Preference)%>%count()%>%dcast(Preference~Country)
+rbind(K,c("Respondents",colSums(K[,c(2:3)],na.rm =T)))%>%kable()
+per <- K%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# 15.What advantages do you think VSLAs have as compared to bank account?(Multiple Selection)
+
+
+```{r}
+dt<-df[,grep("Country|A_15",names(df)),with=F]
+G1<-dt[,c(1:12)]
+G2<-dt[,c(1,13:23)]
+G3<-dt[,c(1,24:34)]
+G4<-dt[,c(1,35:45)]
+Y<-rbind(G1,G2,use.names=FALSE)
+Y<-rbind(Y,G3,use.names=FALSE)
+Y<-rbind(Y,G4,use.names=FALSE)
+q15<-Y
+q15[q15$Country=="-"]<-NA
+names(q15)<-c("Country","I receive interest on savings","I enjoy the meetings","I feel part of a community","I can take loans","I can receive a large sum at the end","Closer to home","With people I trust","Other (specify)","None","I don't know","Doesn't want to answer")
+q15<-clean(q15)
+q15.melt<-melt(q15,id.vars="Country")
+#q15.melt[,Advantage:=ifelse(value==1,"I receive interest on savings",ifelse(value==2,"I enjoy the meetings",ifelse(value==3,"I feel part of a community",ifelse(value==4,"I can take loans",ifelse(value==5,"I can receive a large sum at the end",ifelse(value==6,"Closer to home",ifelse(value==7,"With people I trust",ifelse(value==8,"Other (specify)",ifelse(value==9,"None",ifelse(value==10,"I don't know",ifelse(value==11,"Doesn't want to answer",NA)))))))))))]
+q15.melt$variable <- factor(q15.melt$variable,levels =c("I receive interest on savings","I enjoy the meetings","I feel part of a community","I can take loans","I can receive a large sum at the end","Closer to home","With people I trust","Other (specify)","None","I don't know","Doesn't want to answer","Respondents"))
+K <- q15.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+rbind(K,c("Respondents",607,611))%>%kable()
+#q15[,1:2]%>%drop_na()%>%group_by(Country)%>%count()
+```
+
+ 
+# 16.What advantages do you think bank account has as compared to VSLAs? (Multiple Selection)
+
+```{r}
+dt<-df[,grep("Country|A_16",names(df)),with=F]
+G1<-dt[,c(1:12)]
+G2<-dt[,c(1,13:23)]
+G3<-dt[,c(1,24:34)]
+G4<-dt[,c(1,35:45)]
+Y<-rbind(G1,G2,use.names=FALSE)
+Y<-rbind(Y,G3,use.names=FALSE)
+Y<-rbind(Y,G4,use.names=FALSE)
+q16<-Y
+q16[q16$Country=="-"]<-NA
+names(q16)<-c("Country","Private, nobody knows details","Flexible/no rules","Accessible at all times","Builds a credit history","More secure","Possibility to use savings for paying/ sending money","Possible to get a loan","Other (specify)","None","I don't know","Doesn't want to answer")
+q16<-clean(q16)
+q16.melt<-melt(q16,id.vars="Country")
+#q16.melt[,Advantage:=ifelse(value==1,"Private, nobody knows details",ifelse(value==2,"Flexible/no rules",ifelse(value==3,"Accessible at all times",ifelse(value==4,"Builds a credit history",ifelse(value==5,"More secure",ifelse(value==6,"Possibility to use savings for paying/ sending money",ifelse(value==7,"Possible to get a loan",ifelse(value==8,"Other (specify)",ifelse(value==9,"None",ifelse(value==10,"I don't know",ifelse(value==11,"Doesn't want to answer",NA)))))))))))]
+q16.melt$variable <- factor(q16.melt$variable,levels=c("Private, nobody knows details","Flexible/no rules","Accessible at all times","Builds a credit history","More secure","Possibility to use savings for paying/ sending money","Possible to get a loan","Other (specify)","None","I don't know","Doesn't want to answer","Respondents"))
+K <- q16.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+#q16[,1:2]%>%group_by(Country)%>%count()
+rbind(K,c("Respondents",607,611))%>%kable()
+```
+
+# 17.Are you using mobile money?
+
+```{r}
+dt<-df[,grep("Country|Q_17",names(df)),with=F]
+q17<-staker()
+q17[q17$Country=="-"]<-NA
+q17[,mobile_money_use:=ifelse(Q_17==1,"Yes",ifelse(Q_17==2,"No",NA))]
+q17$mobile_money_use <- factor(q17$mobile_money_use,levels=c('Yes','No',"Respondents"))
+K <- q17%>%drop_na()%>%group_by(Country,mobile_money_use)%>%dcast(mobile_money_use~Country)
+rbind(K,c("Respondents",colSums(K[,c(2:3)],na.rm =T)))%>%kable()
+per <- K%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# 18.Do you use both mobile money and VSLA?	
+
+```{r}
+dt<-df[,grep("Country|Q_18",names(df)),with=F]
+q18<-staker()
+q18[q18$Country=="-"]<-NA
+q18[,Choice:=ifelse(Q_18==1,"I use VSLA more but also mobile money",ifelse(Q_18==2,"I use mobile money more but also VSLA",ifelse(Q_18==3,"I use both equally",ifelse(Q_18==4,"I use only VSLA",ifelse(Q_18==5,"I use only mobile money",ifelse(Q_18==6,"I use neither",ifelse(Q_18==7,"Doesn’t want to answer",NA)))))))]
+q18$Choice <- factor(q18$Choice,levels=c("I use VSLA more but also mobile money","I use mobile money more but also VSLA","I use both equally","I use only VSLA","I use only mobile money","I use neither","Doesn’t want to answer","Respondents"))
+K<-q18%>%drop_na()%>%group_by(Choice,Country)%>%count()%>%dcast(Choice~Country)
+rbind(K,c("Respondents",colSums(K[,c(2:3)],na.rm =T)))%>%kable()
+per <- K%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+
+```
+
+# 19.Do you prefer to save in a VSLA or with mobile money?	
+
+```{r}
+dt<-df[,grep("Country|Q_19",names(df)),with=F]
+q19<-staker()
+q19[q19$Country=="-"]<-NA
+q19[,preference:=ifelse(Q_19==1,"Much prefer VSLA",ifelse(Q_19==2,"Prefer VSLA a little bit",ifelse(Q_19==3,"They are equally good",ifelse(Q_19==4,"Prefer mobile money a little bit",ifelse(Q_19==5,"Much prefer mobile money",ifelse(Q_19==6,"I don't know",NA))))))]
+q19$preference <-factor(q19$preference,levels = c("Much prefer VSLA","Prefer VSLA a little bit","They are equally good","Prefer mobile money a little bit","Much prefer mobile money","I don't know","Respondents"))
+K <- q19%>%drop_na()%>%group_by(preference,Country)%>%count()%>%dcast(preference~Country)
+rbind(K,c("Respondents",colSums(K[,c(2:3)],na.rm =T)))%>%kable()
+per <- K%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# 20.What advantages do you think VSLAs have as compared to mobile money? (Multiple Selection)
+
+```{r}
+dt<-df[,grep("Country|A_20",names(df)),with=F]
+G1<-dt[,c(1:13)]
+G2<-dt[,c(1,14:25)]
+G3<-dt[,c(1,26:37)]
+G4<-dt[,c(1,38:49)]
+Y<-rbind(G1,G2,use.names=FALSE)
+Y<-rbind(Y,G3,use.names=FALSE)
+Y<-rbind(Y,G4,use.names=FALSE)
+q20<-Y
+q20[q20$Country=="-"]<-NA
+names(q20)<-c("Country","Disciplines me","I receive interest on savings","I enjoy the meetings","I feel part of a community",'I can take loans',"I can receive a large sum at the end","Closer to home","With people I trust","Other (specify)","None","I don't know","Doesn’t want to answer")
+q20<-clean(q20)
+q20.melt<-melt(q20[,1:13],id.vars='Country')
+#q20.melt[,Advantage:=ifelse(value==1,"Disciplines me",ifelse(value==2,"I receive interest on savings",ifelse(value==3,"I enjoy the meetings",ifelse(value==4,"I feel part of a community",ifelse(value==5,'I can take loans',ifelse(value==6,"I can receive a large sum at the end",ifelse(value==7,"Closer to home",ifelse(value==8,"With people I trust",ifelse(value==9,"Other (specify)",ifelse(value==10,"None",ifelse(value==11,"I don't know",ifelse(value==12,"Doesn’t want to answer",NA))))))))))))]
+q20.melt$variable <- factor(q20.melt$variable,levels =c("Disciplines me","I receive interest on savings","I enjoy the meetings","I feel part of a community",'I can take loans',"I can receive a large sum at the end","Closer to home","With people I trust","Other (specify)","None","I don't know","Doesn’t want to answer","Respondents"))
+K<-q20.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+rbind(K,c("Respondents",607,611))%>%kable()
+
+```
+
+# 21.What advantages do you think mobile money has as compared to VSLAs? (Multiple Selection)
+
+```{r}
+dt<-df[,grep("Country|A_21",names(df)),with=F]
+G1<-dt[,c(1:11)]
+G2<-dt[,c(1,12:21)]
+G3<-dt[,c(1,22:31)]
+G4<-dt[,c(1,32:41)]
+Y<-rbind(G1,G2,use.names=FALSE)
+Y<-rbind(Y,G3,use.names=FALSE)
+Y<-rbind(Y,G4,use.names=FALSE)
+q21<-Y
+q21[q21$Country=="-"]<-NA
+names(q21)<-c("Country","Private, nobody knows details","Flexible/no rules","Accessible at all times","Builds a credit history","More secure","Possibility to use savings for paying/ sending money","Other (specify)","none","I don't know","Doesn’t want to answer")
+q21<-clean(q21)
+q21.melt<-melt(q21[,1:11],id.vars="Country")
+#q21.melt[,Advantage:=ifelse(value==1,"Private, nobody knows details",ifelse(value==1,"Private, nobody knows details",ifelse(value==2,"Flexible/no rules",ifelse(value==3,"Accessible at all times",ifelse(value==4,"Builds a credit history",ifelse(value==5,"More secure",ifelse(value==6,"Possibility to use savings for paying/ sending money",ifelse(value==7,"Other (specify)",ifelse(value==8,"none",ifelse(value==9,"I don't know",ifelse(value==10,"Doesn’t want to answer",NA)))))))))))]
+q21.melt$variable <- factor(q21.melt$variable,levels = c("Private, nobody knows details","Flexible/no rules","Accessible at all times","Builds a credit history","More secure","Possibility to use savings for paying/ sending money","Other (specify)","none","I don't know","Doesn’t want to answer","Respondents"))
+K<-q21.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+rbind(K,c("Respondents",607,611))%>%kable()
+
+
+
+```
+
+# 22.Do you know of any VSLA that stopped altogether?
+
+```{r}
+dt<-df[,grep("Country|Q_22",names(df)),with=F]
+q22<-staker()
+q22[q22$Country=="-"]<-NA
+q22[,Stopped_groups:=ifelse(Q_22==1,"Yes, one of my own groups",ifelse(Q_22==2,"Yes, a group I know personally but I was not member",ifelse(Q_22==3,"Yes, I heard about it but don’t know the group directly",ifelse(Q_22==4,"No, I never heard of a savings group stopping completely",ifelse(Q_22==5,"I am not sure",NA)))))]
+q22$Stopped_groups<-factor(q22$Stopped_groups,levels =c("Yes, one of my own groups","Yes, a group I know personally but I was not member","Yes, I heard about it but don’t know the group directly","No, I never heard of a savings group stopping completely","I am not sure","Respondents"))
+K<- q22%>%drop_na()%>%group_by(Country,Stopped_groups)%>%count()%>%dcast(Stopped_groups~Country)
+rbind(K,c("Respondents",colSums(K[,c(2:3)],na.rm =T)))%>%kable()
+per <- K%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# 23.What was the reason(s) for the VSLA(s) to stop altogether? (Multiple Selection)
+
+```{r}
+dt<-df[,grep("Country|A_23",names(df)),with=F]
+G1<-dt[,c(1:11)]
+G2<-dt[,c(1,12:21)]
+G3<-dt[,c(1,22:31)]
+G4<-dt[,c(1,32:41)]
+Y<-rbind(G1,G2,use.names=FALSE)
+Y<-rbind(Y,G3,use.names=FALSE)
+Y<-rbind(Y,G4,use.names=FALSE)
+q23<-Y
+q23[q23$Country=="-"]<-NA
+q23<-clean(q23)
+names(q23)<-c("Country",'Lack of time',"Bad performance/management of the group","Fraud/theft by members(s)","Theft by outsider(s)","Conflict between members","Forced to stop (by outsiders)","Members stopped being interested","Group was too small to continue","Other (specify)","I don't know")
+q23<-melt(q23,id.vars="Country")
+#q23[,Reason:=ifelse(Q_23==1,'Lack of time',ifelse(Q_23==2,"Bad performance/management of the group",ifelse(Q_23==3,"Fraud/theft by members(s)",ifelse(Q_23==4,"Theft by outsider(s)",ifelse(Q_23==5,"Conflict between members",ifelse(Q_23==6,"Forced to stop (by outsiders)",ifelse(Q_23==7,"Members stopped being interested",ifelse(Q_23==8,"Group was too small to continue",ifelse(Q_23==9,"Other (specify)",ifelse(Q_23==10,"I don't know",NA))))))))))]
+q23$variable <- factor(q23$variable,levels =c('Lack of time',"Bad performance/management of the group","Fraud/theft by members(s)","Theft by outsider(s)","Conflict between members","Forced to stop (by outsiders)","Members stopped being interested","Group was too small to continue","Other (specify)","I don't know","Respondents"))
+K <-q23%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+#rbind(K,c("Respondents",colSums(K[,c(2:3)],na.rm =T)))%>%kable()
+rbind(K,c("Respondents",607,611))%>%kable()
+```
+
+# 24. What is the gender of the respondent?	
+
+
+```{r}
+dt<-df[,grep("Country|Q_24",names(df)),with=F]
+q24<-staker()
+q24[q24$Country=="-"]<-NA
+q24[,gender:=ifelse(Q_24==1,"Female",ifelse(Q_24==2,"Male",NA))]
+K <-q24%>%drop_na()%>%group_by(Country,gender)%>%count()%>%dcast(gender~Country)
+rbind(K,c('Respondents',colSums(K[,c(2:3)],na.rm =T)))%>%kable()
+#rbind(K,c("Respondents",108,625))%>%kable()
+per <- K%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# 25. Could you estimate the age of the respondent?	I don't know
+
+```{r}
+dt<-df[,grep("Country|Q_25",names(df)),with=F]
+q25<-staker()
+q25[q25$Country=="-"]<-NA
+K <- q25[,c(1,2)]%>%drop_na()%>%group_by(Country)%>%summarise(Mean_age=mean(Q_25),Median_age=median(Q_25))
+rbind(K,c("Respondents",607,611))%>%kable()
+#q25%>%drop_na()%>%group_by(Country)%>%count()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

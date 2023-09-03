@@ -1,0 +1,111 @@
+---
+title: "Members Files"
+author: "John Kamau"
+date: "27/09/2019"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,fig.width = 10,fig.height = 7)
+options(scipen=999)
+```
+
+```{r}
+library("readxl")
+library(tidyverse)
+library(data.table)
+uganda<- read_excel("D:/Kamau Lift/SEEP/Corrections/thende.xlsx") %>% filter(Country=="Uganda")
+mali<- read_excel("D:/Kamau Lift/SEEP/Corrections/SGELI_LT-Outcomes_DATA.MASTER.USD.20190912-DP_v2.xlsx",sheet ="Mali")# %>% drop_na()
+setDT(uganda)
+setDT(mali)
+library(dplyr)
+library(tidyr)
+library(knitr,kableExtra)
+library(formattable)
+library(ggplot2)
+setwd('D:/Kamau Lift/SEEP/Corrections')
+source('theme.R')
+colors <- c("#118467", "#A9711E", "#6D847A", "#BB8755", "#82ACA0", "#9C7F61",
+            "#D88523", "#83A593", "#E6A168", "#9DD0C0", "#BE9D7C", "#A2C8B9",
+            "#EBCABA", "#A1DBD3")
+```
+
+# Graphs for Mali and Uganda membership (Side by side)
+
+```{r}
+# members1<-mali[,grep("^ID$|MenInPresent|WomenInPresent|MembersInPresent|SEEP_MIS_DATACOLLECTION_Q_14|SEEP_MIS_DATACOLLECTION_Q_15|SEEP_MIS_DATACOLLECTION_Q_13",names(mali)),with = F]
+# y =members1 %>% arrange(SEEP_MIS_DATACOLLECTION_Q_13)#MembersInPresent)
+# members1$ID<-factor(members1$ID,levels =y$ID)
+# mem <- members1 %>% drop_na()
+# dt<-copy(mem)[,-c("SEEP_MIS_DATACOLLECTION_Q_13","MembersInPresent")]
+# dt[,MenInPresent:=-MenInPresent]
+# dt[,WomenInPresent:=-WomenInPresent]
+# names(dt)<-c("ID","Men_baseline" ,"Women_baseline" ,"Men_current","Women_current")
+# df <-melt(dt,id.vars ="ID")
+# df$variable<-factor(df$variable,levels =c("Women_baseline" ,"Men_current","Women_current","Men_baseline" ))
+# df %>% ggplot(aes(x =ID,y =value,fill =variable))+geom_bar(stat ='identity',position ='dodge',)+theme1+scale_fill_manual(values =colors)+labs(title ="Mali: Current Vs  Baseline Membership ",y ='Number of Members',x ="Individual Groups")
+
+```
+
+
+<!-- ```{r} -->
+<!-- members1<-uganda[,grep("^ID$|MenInPresent|WomenInPresent|MembersInPresent|SEEP_MIS_DATACOLLECTION_Q_14|SEEP_MIS_DATACOLLECTION_Q_15|SEEP_MIS_DATACOLLECTION_Q_13",names(uganda)),with = F] -->
+<!-- y =members1 %>% arrange(SEEP_MIS_DATACOLLECTION_Q_15)#MembersInPresent) -->
+<!-- members1$ID<-factor(members1$ID,levels =y$ID) -->
+<!-- mem <- members1 %>% drop_na() -->
+<!-- dt<-copy(mem)[,-c("SEEP_MIS_DATACOLLECTION_Q_13","MembersInPresent")] -->
+<!-- dt[,MenInPresent:=-MenInPresent] -->
+<!-- dt[,WomenInPresent:=-WomenInPresent] -->
+<!-- names(dt)<-c("ID","Men_baseline" ,"Women_baseline" ,"Men_current","Women_current") -->
+<!-- df <-melt(dt,id.vars ="ID") -->
+<!-- df$variable<-factor(df$variable,levels =c("Women_baseline","Men_baseline"  ,"Men_current","Women_current")) -->
+<!-- df %>% ggplot(aes(x =ID,y =value,fill =variable))+geom_bar(stat ='identity',position ='dodge',)+theme1+scale_fill_manual(values =colors)+labs(title ="Uganda: Current Vs  Baseline Membership ",y ='Number of Members',x ="Individual Groups") -->
+
+<!-- ``` -->
+
+
+
+# Graphs for Mali and Uganda membership (Stacked)
+
+```{r}
+members1<-mali[,grep("^ID$|MenInPresent|WomenInPresent|MembersInPresent|SEEP_MIS_DATACOLLECTION_Q_14|SEEP_MIS_DATACOLLECTION_Q_15|SEEP_MIS_DATACOLLECTION_Q_13",names(mali)),with = F]
+y =members1 %>% arrange(SEEP_MIS_DATACOLLECTION_Q_13)#MembersInPresent)
+members1$ID<-factor(members1$ID,levels =y$ID)
+mem <- members1 %>% drop_na()
+dt<-copy(mem)[,-c("SEEP_MIS_DATACOLLECTION_Q_13","MembersInPresent")]
+dt[,MenInPresent:=-MenInPresent]
+dt[,WomenInPresent:=-WomenInPresent]
+names(dt)<-c("ID","Men_baseline" ,"Women_baseline" ,"Men_current","Women_current")
+df <-melt(dt,id.vars ="ID")
+df$variable<-factor(df$variable,levels =c("Women_baseline" ,"Men_current","Women_current","Men_baseline" ))
+colors <- c("#12993f","#47321d","#14632d","#654321")
+df %>% ggplot(aes(x =ID,y =value,fill =variable))+geom_bar(stat ='identity')+theme1+scale_fill_manual(values =colors)+labs(title ="Mali: Current Vs  Baseline Membership ",y ='Number of Members',x ="Individual Groups")
+
+```
+
+	
+```{r}
+members1<-uganda[,grep("^ID$|MenInPresent|WomenInPresent|MembersInPresent|SEEP_MIS_DATACOLLECTION_Q_14|SEEP_MIS_DATACOLLECTION_Q_15|SEEP_MIS_DATACOLLECTION_Q_13",names(uganda)),with = F]
+y =members1 %>% arrange(SEEP_MIS_DATACOLLECTION_Q_13)#MembersInPresent)
+members1$ID<-factor(members1$ID,levels =y$ID)
+mem <- members1 %>% drop_na()
+dt<-copy(mem)[,-c("SEEP_MIS_DATACOLLECTION_Q_13","MembersInPresent")]
+dt[,MenInPresent:=-MenInPresent]
+dt[,WomenInPresent:=-WomenInPresent]
+names(dt)<-c("ID","Men_baseline" ,"Women_baseline" ,"Men_current","Women_current")
+df <-melt(dt,id.vars ="ID")
+colors <- c("#12993f","#47321d","#14632d","#654321")
+df$variable<-factor(df$variable,levels =c("Women_baseline","Men_baseline" ,"Women_current" ,"Men_current"))
+d<-df %>% ggplot(aes(x =ID,y =value,fill =variable))+geom_bar(stat ='identity',)+theme1+scale_fill_manual(values =colors)+labs(title ="Uganda: Current Vs  Baseline Membership ",y ='Number of Members',x ="Individual Groups")
+d
+library(plotly)
+##ggplotly(d)
+ids <-c(140,138,137)
+
+
+# confirm
+#members1 %>% dplyr::select(ID,MenInPresent,WomenInPresent,MembersInPresent,SEEP_MIS_DATACOLLECTION_Q_14,SEEP_MIS_DATACOLLECTION_Q_15,SEEP_MIS_DATACOLLECTION_Q_13) %>% filter(ID %in% ids)
+```

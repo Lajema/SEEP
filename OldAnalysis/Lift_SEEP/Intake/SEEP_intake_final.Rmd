@@ -1,0 +1,854 @@
+---
+title: "SEEP Intake Final Data"
+author: "John Kamau"
+date: "16/09/2019"
+output:
+  html_document:
+    df_print: paged
+  always_allow_html: yes
+  pdf_document: default
+  word_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,fig.width = 10,fig.height = 7)
+options(scipen=999)
+
+```
+```{r}
+library(readxl)
+library(data.table)
+library(tidyverse)
+library(plotly)
+df<- read_excel("D:/Kamau Lift/SEEP/Intake/SEEP Intake_2019_13_08_12_40_final.xlsx")
+setDT(df)
+source("theme.R")
+m <- list(
+  l =0,
+  r = 0,
+  b = 0,
+  t = 50
+)
+combined <- read_excel("D:/Kamau Lift/SEEP/combined.xlsx")
+df<-combined[,grep("Country|^ID$|INTAKE",names(combined))]
+
+setDT(df)
+
+X =data.table(names(df))
+X[,cleaned:=gsub("SEEP_INTAKE_","",V1)]
+#view(head(X))
+names(df)<-X$cleaned
+setDT(df)
+
+```
+
+Location
+-----
+The following are the respondent areas with the Country maps
+
+
+```{r}
+# library(ggmap)
+# library(ggplot2)
+# api_key_google = "AIzaSyBdcFLR53zlEQuT249Tx6WJ6eVKgq2qp38"
+# register_google(key = api_key_google)
+# point <- c(2.0313526,29.8481035)
+# 
+# Ugandas <- df[df$Country=="Uganda"]
+# Ugandas$Longitude<-as.numeric(Ugandas$Longitude)
+# Ugandas$Latitude<-as.numeric(Ugandas$Latitude)
+# # Uganda <- get_map(location = c(mean(Ugandas$Longitude,na.rm=T), mean(Ugandas$Latitude,na.rm=T)),
+# #                   zoom =8, maptype = "roadmap")
+# # Uganda_map <- ggmap(Uganda)
+# # Uganda_map + geom_point(data = Ugandas, aes(x = Longitude, y = Latitude), size =2)
+# 
+# 
+# Uganda <- get_map(location = c(mean(Ugandas$Longitude,na.rm=T), mean(Ugandas$Latitude,na.rm=T)),
+#                   zoom =7, maptype = "roadmap")
+# Uganda_map <- ggmap(Uganda,extent = "device")
+# Uganda_map + geom_point(data = Ugandas, aes(x = Longitude, y = Latitude), size =2)
+# 
+# mali <- df[df$Country=="Mali"]
+# mali$Longitude<-as.numeric(mali$Longitude)
+# mali$Latitude<-as.numeric(mali$Latitude)
+#  MAMA <- get_map(location = c(mean(mali$Longitude,na.rm=T), mean(mali$Latitude,na.rm=T)),
+#                   zoom =6, maptype = "roadmap")
+# mali_map <- ggmap(MAMA)
+# mali_map + geom_point(data = mali, aes(x = Longitude, y = Latitude), size =2)
+
+# mali <- df[df$Country=="Mali"]
+# mali$Longitude<-as.numeric(mali$Longitude)
+# mali$Latitude<-as.numeric(mali$Latitude)
+#  MAMA <- get_map(location = c(mean(mali$Longitude,na.rm=T), mean(mali$Latitude,na.rm=T)),
+#                   zoom =6, maptype = "roadmap")
+# mali_map <- ggmap(MAMA)
+# mali_map + geom_point(data = mali, aes(x = Longitude, y = Latitude), size =2)
+
+
+```
+
+
+
+Group Membership and Group Constitution
+-----
+
+
+<!-- ```{r,fig.height=8,fig.width = 10} -->
+<!-- group_behav <- df[,grep("Country|MembersInPresent|MenInPresent|                     No_of_members_attending_meeting|OriginalMembers|WomenInPresent|Q_38",names(df)),with = F] -->
+<!-- names(group_behav)<-c("Country" ,"Members ingroup at start (Admin)","men in group at start (Admin)", "OriginalMembers (Admin)","women in group at start (Admin)"," Group Members Q_38") -->
+
+<!-- group_behav$Country[group_behav$Country=="-"]<-NA -->
+<!-- G.melt <- melt(group_behav,id.vars="Country") -->
+<!-- G.melt$variable <- factor(G.melt$variable,levels = c("OriginalMembers (Admin)","Members in group at start (Admin)","men in group at start (Admin)", "women in group at start (Admin)"," Group Members Q_38")) -->
+<!-- G.melt[,value:=ifelse(value == "-",NA,ifelse(value=="0",NA,as.numeric(value))) ]%>%drop_na()%>% -->
+<!--   ggplot(aes(x=variable,y=value))+geom_boxplot(fill = colors[1])+scale_fill_manual(values = colors,name= "")+theme1+ -->
+<!--   theme(axis.text.x =element_text(angle=90,vjust =0.5))+scale_y_continuous(breaks= seq(0,50,by =5))+coord_cartesian(ylim=c(0,50))+ -->
+<!--   labs(title="Membership Questions ADM1",y="Number of Members",x="Membership")+facet_wrap(~Country)+facet_grid(vars(rows= Country)) -->
+
+<!-- gender = df[,grep("Country|T_39|Q_38",names(df)),with = F] -->
+<!-- names(gender) = c("Country","Total_Members","Female","Male") -->
+<!-- #gender$test <- rowSums(gender[,c("Female","Male")]) -->
+<!-- gender[gender$Country=="-"]<- NA -->
+<!-- melt(gender,id.vars = "Country")%>%drop_na()%>%ggplot(aes(x=variable,y=value))+geom_boxplot(fill =colors[1])+facet_wrap(~Country)+labs(title = "Group Members Gender Distribution Int-39",x="Mali (n=163)           Uganda(n=155)")+scale_fill_manual(values = colors,name= "")+theme1+scale_y_continuous(breaks= seq(0,200,by =10)) -->
+
+<!-- new  <- df[,grep("Country|No_of_Loans_Outsatnding_by_Women|No_of_loans_outstanding",names(df)),with = F] -->
+<!-- names(new)<- c("Country","No_of_Loans_Outsatnding_by_Women (Admin)","No_of_loans_outstanding (Admin)") -->
+<!-- new[new$Country=="-"]<-NA -->
+<!-- new.melt <-melt(new,id.vars="Country") -->
+<!-- new.melt$variable<-factor(new.melt$variable,levels = c("No_of_loans_outstanding (Admin)","No_of_Loans_Outsatnding_by_Women (Admin)")) -->
+<!-- new.melt$value <-as.numeric(new.melt$value) -->
+<!-- new.melt[,value:=ifelse(value==0,NA,value)] -->
+<!-- new.melt%>%drop_na()%>%ggplot(aes(x=variable,y=value))+geom_boxplot(fill =colors[1])+facet_wrap(~Country)+scale_y_continuous(breaks=seq(0,30,by =1))+labs(title ="NUmber of Loans Outstanding in Uganda ADM2",y="Members with LOans",x="n = 76") -->
+
+<!-- ``` -->
+
+# What is the chairperson’s gender?	Female
+
+```{r}
+femme <-df[,grep("Country|Q_50",names(df)),with = F]
+femme[femme$Country=="-"]<-NA
+femme[,Q_50:=ifelse(Q_50==1,"Female",ifelse(Q_50==2,"Male",NA))]
+UG <- femme[femme$Country=="Uganda"]
+ML <- femme[femme$Country=="Mali"]
+plot_ly(data=data.frame(table(UG$Q_50)),labels=~Var1,values =~Freq,type= "pie",
+              #textposition = '',
+               textinfo = 'label+percent',
+               insidetextfont = list(color = '#FFFFFF'),
+               textfont = list(color = '#000000', size = 14),
+               #hoverinfo = 'text',
+               #text = ~paste('$', X1960, ' billions'),
+               marker = list(colors = colors,
+                             line = list(color = '#FFFFFF', width = 1)),
+               #The 'pull' attribute can also be used to create space between the sectors
+               showlegend = F,  direction =  "counterclockwise", rotation = 180) %>%
+    layout(title = paste( "<b>",  "Chair Persons Gender Int-50", "<b>", sep = ""),
+           paper_bgcolor="#F9F5EA",
+           plot_bgcolor="#F9F5EA",
+           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           margin = m)
+plot_ly(data=data.frame(table(ML$Q_50)),labels=~Var1,values =~Freq,type= "pie",
+              #textposition = '',
+               textinfo = 'label+percent',
+               insidetextfont = list(color = '#FFFFFF'),
+               textfont = list(color = '#000000', size = 14),
+               #hoverinfo = 'text',
+               #text = ~paste('$', X1960, ' billions'),
+               marker = list(colors = colors,
+                             line = list(color = '#FFFFFF', width = 1)),
+               #The 'pull' attribute can also be used to create space between the sectors
+               showlegend = F,  direction =  "counterclockwise", rotation = 180) %>%
+    layout(title = paste( "<b>",  "Chair Persons Gender Int-50", "<b>", sep = ""),
+           paper_bgcolor="#F9F5EA",
+           plot_bgcolor="#F9F5EA",
+           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           margin = m)
+femme %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# What is the gender of the respondent?
+
+```{r}
+femme <-df[,grep("Country|Q_52",names(df)),with = F]
+femme[femme$Country=="-"]<-NA
+femme[,Q_52:=ifelse(Q_52==1,"Female",ifelse(Q_52==2,"Male",NA))]
+UG <- femme[femme$Country=="Uganda"]
+UG%>%drop_na()%>%count()
+ML <- femme[femme$Country=="Mali"]
+ML%>%drop_na()%>%count()
+plot_ly(data=data.frame(table(UG$Q_52)),labels=~Var1,values =~Freq,type= "pie",
+              #textposition = '',
+               textinfo = 'label+percent',
+               insidetextfont = list(color = '#FFFFFF'),
+               textfont = list(color = '#000000', size = 14),
+               #hoverinfo = 'text',
+               #text = ~paste('$', X1960, ' billions'),
+               marker = list(colors = colors,
+                             line = list(color = '#FFFFFF', width = 1)),
+               #The 'pull' attribute can also be used to create space between the sectors
+               showlegend = F,  direction =  "counterclockwise", rotation = 180) %>%
+    layout(title = paste( "<b>",  "What is respondent’s gender?  Int-52 \n Uganda", "<b>", sep = ""),
+           paper_bgcolor="#F9F5EA",
+           plot_bgcolor="#F9F5EA",
+           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           margin = m)
+plot_ly(data=data.frame(table(ML$Q_52)),labels=~Var1,values =~Freq,type= "pie",
+              #textposition = '',
+               textinfo = 'label+percent',
+               insidetextfont = list(color = '#FFFFFF'),
+               textfont = list(color = '#000000', size = 14),
+               #hoverinfo = 'text',
+               #text = ~paste('$', X1960, ' billions'),
+               marker = list(colors = colors,
+                             line = list(color = '#FFFFFF', width = 1)),
+               #The 'pull' attribute can also be used to create space between the sectors
+               showlegend = F,  direction =  "counterclockwise", rotation = 180) %>%
+    layout(title = paste( "<b>",  "What is respondent’s gender?  Int-52 \n Mali", "<b>", sep = ""),
+           paper_bgcolor="#F9F5EA",
+           plot_bgcolor="#F9F5EA",
+           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           margin = m)
+femme %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# Please estimate the age of the respondent and write in years?
+
+```{r}
+age<- df[,grep("Country|Q_53",names(df)),with = F]
+age[age$Country == "-"]<-NA
+age$Q_53[age$Q_53<2]<-NA
+age[,q_53:=ifelse(Q_53<100,Q_53,ifelse(Q_53<2000,2019-Q_53,NA))]
+age[,q_53:=ifelse(q_53>100,33,ifelse(q_53<10,NA,q_53))]
+age[age$Country=="Uganda"]%>%drop_na()%>%count()
+age[age$Country=="Mali"]%>%drop_na()%>%count()
+x1 <-age%>%drop_na() %>%ggplot(aes(y =q_53))+geom_boxplot(fill=colors[1])+facet_wrap(~Country)+
+  scale_fill_manual(values=colors,name= "")+theme1+labs(title="Estimated Age of the Respondent(Box PLot) Int-53",y="Age","Mali n=160         Uganda n=106")+
+  scale_y_continuous(breaks= seq(0,100,by=5))
+
+
+x2 <-age%>%drop_na() %>%ggplot(aes(x =q_53))+geom_histogram(fill=colors[1])+facet_wrap(~Country)+
+  scale_fill_manual(values=colors,name= "")+theme1+labs(title="Estimated Age of the Respondent(Histogram) Int-53",y="Count","Mali n=160         Uganda n=106")+
+  scale_y_continuous(breaks= seq(0,25,by=2))
+ggplotly(x1)
+ggplotly(x2)
+age %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+
+
+```{r}
+# Other_Data <- df[,grep("Country|Net_Saving_by_Women|Loan_fund_Cash_in_boxbank|Value_of_loans_outstanding",names(df)),with = F]
+# Uganda <- Other_Data[Other_Data$Country == "Uganda"]
+# data <- melt(Uganda,id.vars = "Country")
+# data[,value:=ifelse(value=="-",NA,ifelse(value=="0",NA,as.numeric(value)))]%>%drop_na()%>%
+#   ggplot(aes(x= variable,y=value))+geom_boxplot()+facet_wrap(~Country)+facet_wrap(~Country)+
+#   scale_fill_manual(values=colors,name= "")+theme1+labs(title="Estimated Age of the Respondent(Box PLot)",y="Age",x= "")+
+#   facet_grid(vars(rows= Country))+theme(axis.text.x = element_text(angle=90))+coord_cartesian(ylim=c(0,500000))
+```
+
+# How much was the fixed savings amount during first cycle? 
+
+```{r}
+mali_Q<-df[,grep("Country|Q_26|Q_27",names(df)),with = F]
+#print(length(mali_Q$Country[mali_Q$Country=="Uganda"]))
+#print(length(mali_Q$Country[mali_Q$Country=="Mali"]))
+mali_Q$Q_26[mali_Q$Q_26<0]<- NA
+mali_Q$Q_27[mali_Q$Q_27<0]<- NA
+names(mali_Q)<-c("Country","Mali","Uganda")
+x <- melt(mali_Q[,c(2:3)]) %>%drop_na()
+M <- x[x$variable=="Mali"]
+b1<- M%>%ggplot(aes(x="",y=value))+geom_boxplot(fill=colors[1])+coord_cartesian(ylim = c(0,250))+
+  scale_y_continuous(breaks =seq(0,250,by = 25))+
+  labs(title = "What was the fixed savings amount during the first cycle? (Mali) Int-26","n=163",y= "Savings in Mali Franc")+
+  scale_fill_manual(name = "",values = colors)+theme1
+
+U <- x[x$variable=="Uganda"]
+b2 <- U%>%ggplot(aes(x="",y=value))+geom_boxplot(fill=colors[1])+scale_fill_manual(name = "",values=colors)+
+  theme1+scale_y_continuous(breaks=seq(0,5000,by =500))+coord_cartesian(ylim = c(0,5000))+labs(title ="What was the fixed savings amount during the first cycle?”  (Uganda) Int-27", "n=155",y ="savings in UGX")
+
+mali_Q$Index = 1:308
+ug <- mali_Q[,c(2,4)]
+ug%>%drop_na()%>%arrange(Mali)->UG
+ug$Index <-factor(ug$Index,levels =UG$Index)
+b3<-ug%>%ggplot(aes(x=Index,y=Mali))+geom_bar(stat="identity",fill= colors[1])+scale_fill_manual(values = colors,name= "")+theme1+
+  scale_y_continuous(breaks = seq(0,1000,by =50))+labs(title="What was the fixed savings amount during the first cycle?  (Mali) Int-26", "Respondents  n=163")+theme(axis.text.x=element_blank())
+ggplotly(b1)
+ggplotly(b2)
+ggplotly(b3)
+
+```
+
+# Savers in Uganda are seperated into two groups because of the variation in group contribution: Lower savers 10000 and below and high savers that are above 10000
+
+```{r}
+ug <- mali_Q[,c(3,4)]
+ug%>%drop_na()%>%arrange(Uganda)->UG
+ug$Index <-factor(ug$Index,levels =UG$Index)
+ug[,Echelon:=ifelse(Uganda<10000,"Lower Savers","Higher Savers")]
+Lower <- ug[Echelon=="Lower Savers"]
+Higher <- ug[Echelon=="Higher Savers"]
+box <-Lower%>%drop_na()%>%ggplot(aes(x=Index,y=Uganda))+geom_bar(stat="identity",fill=colors[1])+scale_fill_manual(values = colors,name= "")+theme1+
+  labs(title="What was the fixed savings amount during the first cycle?”  Int-27","Respondents n=131")+theme(axis.text.x=element_blank())+scale_y_continuous(breaks= seq(0,5000,by =500))
+ggplotly(box)
+x %>% drop_na() %>% group_by(variable) %>% count()
+
+```
+
+# How often did the group meet in the first cycle?
+
+```{r}
+meetings <- df[,grep("Country|Q_28",names(df)),with = F]
+meetings[,Q_28:=ifelse(Q_28==1,"Weekly",ifelse(Q_28==2,"Every 2 Weeks",ifelse(Q_28==3,"Monthly",ifelse(Q_28==4,"Non_regular",ifelse(Q_28==5,"Other",NA)))))]
+meetings_UG <- meetings[meetings$Country=="Uganda"]
+meetings_M <- meetings[meetings$Country=="Mali"]
+p1<- plot_ly(data = data.frame(table(meetings_UG$Q_28)),values=~Freq,labels = ~Var1,type = "pie",
+              #textposition = '',
+               textinfo = 'label+percent',
+               insidetextfont = list(color = '#FFFFFF'),
+               textfont = list(color = '#000000', size = 14),
+               #hoverinfo = 'text',
+               #text = ~paste('$', X1960, ' billions'),
+               marker = list(colors = colors,
+                             line = list(color = '#FFFFFF', width = 1)),
+               #The 'pull' attribute can also be used to create space between the sectors
+               showlegend = F,  direction =  "counterclockwise", rotation = 90) %>%
+    layout(title = paste( "<b>",  "How Often the Group Met (Uganda/1st Cycle) Int-28 ", "<b>", sep = ""),
+           paper_bgcolor="#F9F5EA",
+           plot_bgcolor="#F9F5EA",
+           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           margin = m)
+p2<- plot_ly(data = data.frame(table(meetings_M$Q_28)),values=~Freq,labels = ~Var1,type = "pie",
+             # textposition = '',
+               textinfo = 'label+percent',
+               insidetextfont = list(color = '#FFFFFF'),
+               textfont = list(color = '#000000', size = 14),
+               #hoverinfo = 'text',
+               #text = ~paste('$', X1960, ' billions'),
+               marker = list(colors = colors,
+                             line = list(color = '#FFFFFF', width = 1)),
+               #The 'pull' attribute can also be used to create space between the sectors
+               showlegend = F,  direction =  "counterclockwise", rotation = 90) %>%
+    layout(title = paste( "<b>",  "How Often The Group Met(Mali/1st Cycle) Int-28 ", "<b>", sep = ""),
+           paper_bgcolor="#F9F5EA",
+           plot_bgcolor="#F9F5EA",
+           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           margin = m)
+p1
+p2
+meetings[,1:2] %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# How often does your group meet?
+
+```{r}
+meetings <- df[,grep("Country|Q_34",names(df)),with = F]
+meetings[,Q_34:=ifelse(Q_34==1,"Daily",ifelse(Q_34==2,"Weekly",ifelse(Q_34==3,"Every 2 Weeks",ifelse(Q_34==4,"Monthly",ifelse(Q_34==5,"Non Regular","2 days in a week")))))]
+meetings_UG <- meetings[meetings$Country=="Uganda"]
+meetings_M <- meetings[meetings$Country=="Mali"]
+p1<- plot_ly(data = data.frame(table(meetings_UG$Q_34)),values=~Freq,labels = ~Var1,type = "pie",
+             # textposition = '',
+               textinfo = 'label+percent',
+               insidetextfont = list(color = '#FFFFFF'),
+               textfont = list(color = '#000000', size = 14),
+               #hoverinfo = 'text',
+               #text = ~paste('$', X1960, ' billions'),
+               marker = list(colors = colors,
+                             line = list(color = '#FFFFFF', width = 1)),
+               #The 'pull' attribute can also be used to create space between the sectors
+               showlegend = F,  direction =  "counterclockwise", rotation = 90) %>%
+    layout(title = paste( "<b>",  "How often does your group meet?(Uganda,n=155) Int-34", "<b>", sep = ""),
+           paper_bgcolor="#F9F5EA",
+           plot_bgcolor="#F9F5EA",
+           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           margin = m)
+p2<- plot_ly(data = data.frame(table(meetings_M$Q_34)),values=~Freq,labels = ~Var1,type = "pie",
+             # textposition = '',
+               textinfo = 'label+percent',
+               insidetextfont = list(color = '#FFFFFF'),
+               textfont = list(color = '#000000', size = 14),
+               #hoverinfo = 'text',
+               #text = ~paste('$', X1960, ' billions'),
+               marker = list(colors = colors,
+                             line = list(color = '#FFFFFF', width = 1)),
+               #The 'pull' attribute can also be used to create space between the sectors
+               showlegend = F,  direction =  "counterclockwise", rotation = 90) %>%
+    layout(title = paste( "<b>",  "How often does your group meet? (Mali,n=163) Int-34", "<b>", sep = ""),
+           paper_bgcolor="#F9F5EA",
+           plot_bgcolor="#F9F5EA",
+           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           margin = m)
+p1
+p2
+meetings[,1:2] %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# What savings obligations do group-members have?
+
+```{r}
+savings <- df[,grep("Country|T_40",names(df)),with= F]
+names(savings) <- c("Country","All save Same","All save same,others have double/tripple","Save in shares[1-5]","savein shares[no min -5]","save in shares,other rules apply","Nullers","Other","Nuller")
+savings[,Nullers:=NULL]
+savings[,Nuller:=NULL]
+new<- melt(savings,id.vars = "Country")
+new$Country[new$Country=="-"] <-NA
+new[,value:=ifelse(value==1,"Yes",ifelse(value==2,"No",ifelse(value==3,"I Dont Know",NA)))]
+x <- new%>%drop_na()%>%ggplot(aes(x=variable,fill=value))+geom_bar(position = "fill")+scale_fill_manual(values = colors,name = "")+theme1+coord_flip()+facet_wrap(~Country)+labs(title="What savings obligations do group members have?","Mali(n=163)     Uganda (n=155)")
+print("Original Graph")
+x
+print("graph in Plotly")
+ggplotly(x)
+savings %>% drop_na() %>% group_by(Country) %>% count()
+
+```
+
+
+
+
+Loans and Other Financial Obligations
+-----
+Can group members take loans from the savings held by the group?
+
+```{r}
+loans <- df[,grep("Country|Q_42",names(df)),with= F]
+loans[,Q_42:=ifelse(Q_42==1,"Yes","No")]
+meetings =copy(loans)
+meetings_UG <- meetings[meetings$Country=="Uganda"]
+meetings_M <- meetings[meetings$Country=="Mali"]
+p1<- plot_ly(data = data.frame(table(meetings_UG$Q_42)),values=~Freq,labels = ~Var1,type = "pie",
+             # textposition = '',
+               textinfo = 'label+percent',
+               insidetextfont = list(color = '#FFFFFF'),
+               textfont = list(color = '#000000', size = 14),
+               #hoverinfo = 'text',
+               #text = ~paste('$', X1960, ' billions'),
+               marker = list(colors = colors,
+                             line = list(color = '#FFFFFF', width = 1)),
+               #The 'pull' attribute can also be used to create space between the sectors
+               showlegend = F,  direction =  "counterclockwise", rotation = 90) %>%
+    layout(title = paste( "<b>",  "Can Group Members Take Loans?  Int-42", "<b>", sep = ""),
+           paper_bgcolor="#F9F5EA",
+           plot_bgcolor="#F9F5EA",
+           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           margin = m)
+p2<- plot_ly(data = data.frame(table(meetings_M$Q_42)),values=~Freq,labels = ~Var1,type = "pie",
+             # textposition = '',
+               textinfo = 'label+percent',
+               insidetextfont = list(color = '#FFFFFF'),
+               textfont = list(color = '#000000', size = 14),
+               #hoverinfo = 'text',
+               #text = ~paste('$', X1960, ' billions'),
+               marker = list(colors = colors,
+                             line = list(color = '#FFFFFF', width = 1)),
+               #The 'pull' attribute can also be used to create space between the sectors
+               showlegend = F,  direction =  "counterclockwise", rotation = 90) %>%
+    layout(title = paste( "<b>",  "Can Group Members Take Loans? Int-42", "<b>", sep = ""),
+           paper_bgcolor="#F9F5EA",
+           plot_bgcolor="#F9F5EA",
+           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           margin = m)
+p1
+p2
+loans %>% drop_na() %>% group_by(Country) %>% count()
+
+```
+
+# What rules apply for being eligible for a loan?
+
+```{r}
+rules <- df[,grep("Country|T_43",names(df)),with = F]
+names(rules) = c("Country","Attendance of Group meetings","3X Savings","Other Min Savings Criteria","Sound Plan for the money","Invest Money in Business","Other","Nuller")
+rules[,Nuller:=NULL]
+R<- melt(rules,id.vars = "Country")
+R[,value:=ifelse(value==1,"Yes",ifelse(value==2,"No",ifelse(value==3,"I dont Know",NA)))]
+R[,Country:=ifelse(Country=="-",NA,Country)]
+y =R%>%drop_na()%>%ggplot(aes(x = variable,fill = value))+geom_bar(position = "fill")+coord_flip()+facet_wrap(~Country)+scale_fill_manual(values = colors,name = "")+theme1+labs(title= "What rules apply for being eligible for a loan?” Int-43","Mali (n=163)         Uganda(n=155)")
+print("original graph")
+y
+print("graph in Plotly")
+
+ggplotly(y)
+rules %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# What is the maximum loan period?
+
+```{r}
+length <- df[,grep("Country|Q_44",names(df)),with = F]
+length[,Q_44:=ifelse(Q_44==1,"One month",ifelse(Q_44==2,"2-3 month",ifelse(Q_44==3,"4-6 month",ifelse(Q_44==4,"More than 6 months",ifelse(Q_44==5,"Other",ifelse(Q_44,"Other",ifelse(Q_44==6,"I dont Know",ifelse(Q_44==7,"Other",NA))))))))]
+length$Q_44<-factor(length$Q_44,levels =c("One month","2-3 month","4-6 month","More than 6 months","Other","I dont Know"))
+length1 <- length[length$Country=="Uganda"]
+length2 <- length[length$Country=="Mali"]
+plot_ly(data=data.frame(table(length1$Q_44)),labels=~Var1,values =~Freq,type= "pie",sort=F,
+             # textposition = '',
+               textinfo = 'label+percent',
+               insidetextfont = list(color = '#FFFFFF'),
+               textfont = list(color = '#000000', size = 14),
+               #hoverinfo = 'text',
+               #text = ~paste('$', X1960, ' billions'),
+               marker = list(colors = colors,
+                             line = list(color = '#FFFFFF', width = 1)),
+               #The 'pull' attribute can also be used to create space between the sectors
+               showlegend = F,  direction =  "clockwise", rotation = 340) %>%
+    layout(title = paste( "<b>",  "Maximum Loan Period?  Int-44", "<b>", sep = ""),
+           paper_bgcolor="#F9F5EA",
+           plot_bgcolor="#F9F5EA",
+           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           margin = m)
+        
+plot_ly(data=data.frame(table(length2$Q_44)),labels=~Var1,values =~Freq,type= "pie",sort=F,
+             # textposition = '',
+               textinfo = 'label+percent',
+               insidetextfont = list(color = '#FFFFFF'),
+               textfont = list(color = '#000000', size = 14),
+               #hoverinfo = 'text',
+               #text = ~paste('$', X1960, ' billions'),
+               marker = list(colors = colors,
+                             line = list(color = '#FFFFFF', width = 1)),
+               #The 'pull' attribute can also be used to create space between the sectors
+               showlegend = F,  direction =  "clockwise", rotation = 10) %>%
+    layout(title = paste( "<b>",  "Maximum Loan Period? Int-44", "<b>", sep = ""),
+           paper_bgcolor="#F9F5EA",
+           plot_bgcolor="#F9F5EA",
+           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           margin = m)
+length[,1:2] %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# What is the interest rate charged by the group? Indicate the interest rate as a percentage.
+
+```{r}
+interest<- df[,grep("Country|Q_45",names(df)),with = F]
+interest[interest$Country == "-"]<-NA
+#interest%>%drop_na()%>%group_by(Country)%>%count()
+i1<-interest%>%drop_na() %>%ggplot(aes(y =Q_45))+geom_boxplot(fill = colors[1])+facet_wrap(~Country)+
+  scale_fill_manual(values=colors,name= "")+theme1+labs(title="Interest Rate Charged(Box_Plot) Int-45","Interest Rate as a Percentage", "Mali n=163                       Uganda n=155")+
+  scale_y_continuous(breaks= seq(0,30,by=2))+coord_cartesian(ylim = c(0,30))
+
+i2<-interest%>%drop_na() %>%ggplot(aes(x =Q_45))+geom_histogram(fill=colors[1])+facet_wrap(~Country)+
+  scale_fill_manual(values=colors,name= "")+theme1+labs(title="Interest Rate Charged (Histogram) Int-45", "Uganda n=155                              Mali n=163")+
+  scale_x_continuous(breaks= seq(0,100,by=5))+coord_cartesian(xlim = c(0,100))+facet_grid(rows=vars(Country))+
+  scale_y_continuous(breaks= seq(0,150,by=20))
+ggplotly(i1)
+ggplotly(i2)
+interest %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+
+# How is the interest calculated/applied?
+
+```{r}
+calc<- df[,grep("Country|Q_46",names(df)),with = F]
+calc[calc$Country=="-"]<-NA
+calc[,Q_46:=ifelse(Q_46==1,"Charged 1 time",ifelse(Q_46==2,"charged each month on the (original) loan amount",ifelse(Q_46==3,"Charged each month,on loan Bal",ifelse(Q_46==4,"Other",ifelse(Q_46==5,"I dont Know",NA)))))]
+UG <- calc[calc$Country=="Uganda"]
+ML <-calc[calc$Country=="Mali"]
+plot_ly(data=data.frame(table(UG$Q_46)),labels=~Var1,values =~Freq,type= "pie",
+             # textposition = '',
+               textinfo = 'label+percent',
+               insidetextfont = list(color = '#FFFFFF'),
+               textfont = list(color = '#000000', size = 14),
+               #hoverinfo = 'text',
+               #text = ~paste('$', X1960, ' billions'),
+               marker = list(colors = colors,
+                             line = list(color = '#FFFFFF', width = 1)),
+               #The 'pull' attribute can also be used to create space between the sectors
+               showlegend = F,  direction =  "counterclockwise", rotation = 90) %>%
+    layout(title = paste( "<b>",  "How Interest is Calculated Int-46", "<b>", sep = ""),
+           paper_bgcolor="#F9F5EA",
+           plot_bgcolor="#F9F5EA",
+           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           margin = m)
+plot_ly(data=data.frame(table(ML$Q_46)),labels=~Var1,values =~Freq,type= "pie",
+             # textposition = '',
+               textinfo = 'label+percent',
+               insidetextfont = list(color = '#FFFFFF'),
+               textfont = list(color = '#000000', size = 14),
+               #hoverinfo = 'text',
+               #text = ~paste('$', X1960, ' billions'),
+               marker = list(colors = colors,
+                             line = list(color = '#FFFFFF', width = 1)),
+               #The 'pull' attribute can also be used to create space between the sectors
+               showlegend = F,  direction =  "counterclockwise", rotation = 180) %>%
+    layout(title = paste( "<b>",  "How is Interest Calculated? Int-46", "<b>", sep = ""),
+           paper_bgcolor="#F9F5EA",
+           plot_bgcolor="#F9F5EA",
+           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           margin = m)
+calc[,1:2] %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# What do you think about the amount of money available for loans?
+- Changed the graph to a bar plot because the long texts cannot fit in a Pie Chart
+
+```{r,fig.width =9}
+m <- list(
+  l =0,
+  r = 0,
+  b = 0,
+  t = 50
+)
+cal<- df[,grep("Country|Q_47",names(df)),with = F]
+cal[cal$Country=="-"]<-NA
+cal[,Q_47:= ifelse(Q_47==1,"There are always more people interested to take a loan than the available loan funds",ifelse(Q_47==2,"There are sometimes more loan applications than available loan funds",ifelse(Q_47==3,"There is always more available loan funds than the demand for loans",ifelse(Q_47==4,"It varies, sometimes more funds, sometimes more loan applications",ifelse(Q_47==5,"Other",ifelse(Q_47==6,"I dont Know",NA))))))]
+UG <- cal[cal$Country=="Uganda"]
+ML <- cal[cal$Country=="Mali"]
+d1<-data.frame(table(UG$Q_47))%>%ggplot(aes(x=Var1,y=(Freq)))+geom_bar(stat ="identity",fill=colors[1])+
+  coord_flip()+labs(title="What do you think about the amount \n of money available for loans? \n int-47",y="Count",x="Loan  Amount")+scale_fill_manual(values=colors)+#+theme1+
+  scale_y_continuous(breaks=seq(0,60,by = 5))
+
+d2<-data.frame(table(ML$Q_47))%>%ggplot(aes(x=Var1,y=(Freq)))+geom_bar(stat ="identity",fill=colors[1])+
+  coord_flip()+labs(title="What do you think about the amount \n of money available for loans?  \n int-47",y="Count",x="Loan  Amount")+scale_fill_manual(values=colors)+#+theme1+
+  scale_y_continuous(breaks=seq(0,60,by = 5))
+ggplotly(d1)
+ggplotly(d2)
+
+cal[,1:2] %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# If there is cash left over at the end of a meeting, what happens?
+- Also Changed the graph to a bar plot because the long texts cannot fit in a Pie Chart
+
+
+```{r}
+cals<- df[,grep("Country|Q_48",names(df)),with = F]
+cals[cals$Country=="-"]<-NA
+cals[,Q_48:=ifelse(Q_48==1,"The money stays in the group until next meeting",ifelse(Q_48==2,"Members are obligated to borrow the money",ifelse(Q_48==3,"The funds are deposited in a (bank-)account",ifelse(Q_48==4,"Other",ifelse(Q_48==5,"This situation has never happened",NA)))))]
+
+UG <- cals[cals$Country=="Uganda"]
+ML <- cals[cals$Country=="Mali"]
+d1<-data.frame(table(UG$Q_48))%>%ggplot(aes(x=Var1,y=(Freq)))+geom_bar(stat ="identity",fill=colors[1])+
+  coord_flip()+labs(title="If there is cash left over at the end of a meeting,\n what happens?  int-48",y="Count",x="Loan  Amount")+scale_fill_manual(values=colors)+#+theme1+
+  scale_y_continuous(breaks=seq(0,140,by = 10))
+
+d2<-data.frame(table(ML$Q_48))%>%ggplot(aes(x=Var1,y=(Freq)))+geom_bar(stat ="identity",fill=colors[1])+
+  coord_flip()+labs(title="If there is cash left over at the end of a meeting, \nwhat happens?  int-48",y="Count",x="Loan  Amount")+scale_fill_manual(values=colors)+#+theme1+
+  scale_y_continuous(breaks=seq(0,160,by = 10))
+ggplotly(d1)
+ggplotly(d2)
+cals[,1:2] %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# In between meetings, where does the group keep its cash?
+
+```{r,fig.width=10}
+where <- c("Country", "box/bagwithout locks","box/bag with 1 lock","box/bag with 2|more locks","No specified place,with treasurer|other group-member","Mobile money","financial service providereg Bank","Other (specified)","We won’t tell you","I don't know")
+keep <- df[,grep("Country|A_41",names(df)),with= F]
+names(keep)<-where
+keep[keep$Country=="-"]<-NA
+m <-melt(keep,id.vars="Country")
+#keep[,Q_41:=ifelse(cash==1,"Box|no Locks",ifelse(cash==2,"Box|1 lock",ifelse(cash==3,"Box|2/more locks",ifelse(cash==4,"No specified Place",ifelse(cash==5,"Treasurer|Member",ifelse(cash==6,"Mobile Money",ifelse(cash==7,"bank",ifelse(cash==8,"Other",ifelse(cash==9,"Wont tell You","I dont Know")))))))))]
+
+
+cals <-m
+UG <- cals[cals$Country=="Uganda"]
+D1<- UG %>% group_by(variable) %>% summarise(H =sum(value,na.rm = T))
+ML <- cals[cals$Country=="Mali"]
+D2<- ML %>% group_by(variable) %>% summarise(H =sum(value,na.rm = T))
+
+plot_ly(data=D1,labels=~variable,values =~H,type= "pie",
+             # textposition = '',
+               textinfo = 'label+percent',
+               insidetextfont = list(color = '#FFFFFF'),
+               textfont = list(color = '#000000', size = 12),
+               #hoverinfo = 'text',
+               #text = ~paste('$', X1960, ' billions'),
+               marker = list(colors = colors,
+                             line = list(color = '#FFFFFF', width = 1)),
+               #The 'pull' attribute can also be used to create space between the sectors
+               showlegend = F,  direction =  "counterclockwise", rotation = 170) %>%
+    layout(title = paste( "<b>",  "In between meetings,where does group keep its cash? Int-41", "<b>", sep = ""),
+           paper_bgcolor="#F9F5EA",
+           plot_bgcolor="#F9F5EA",
+           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           margin = m)
+plot_ly(data=D2,labels=~variable,values =~H,type= "pie",
+             # textposition = '',
+               textinfo = 'label+percent',
+               insidetextfont = list(color = '#FFFFFF'),
+               textfont = list(color = '#000000', size = 14),
+               #hoverinfo = 'text',
+               #text = ~paste('$', X1960, ' billions'),
+               marker = list(colors = colors,
+                             line = list(color = '#FFFFFF', width = 1)),
+               #The 'pull' attribute can also be used to create space between the sectors
+               showlegend = F,  direction =  "counterclockwise", rotation = 170) %>%
+    layout(title = paste( "<b>",  "In between meetings,where does the group keep its cash?  Int-41", "<b>", sep = ""),
+           paper_bgcolor="#F9F5EA",
+           plot_bgcolor="#F9F5EA",
+           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           margin = m)
+keep %>% drop_na() %>% group_by(Country) %>% count()
+
+```
+
+# is the group correct
+
+```{r}
+group <- df[,grep("Country|Q_25",names(df)),with= F]
+group[group$Country=="-"]<-NA
+group[,Q_25:=ifelse(Q_25==1,"Information is correct and sounds like my group",ifelse(Q_25==2,"Most of the information is correct but some I don’t  recognize",ifelse(Q_25==3,"Information seems wrong, not from our group","Other")))]
+
+
+cals <-group
+UG <- cals[cals$Country=="Uganda"]
+ML <- cals[cals$Country=="Mali"]
+plot_ly(data=data.frame(table(UG$Q_25)),labels=~Var1,values =~Freq,type= "pie",
+             # textposition = '',
+               textinfo = 'label+percent',
+               insidetextfont = list(color = '#FFFFFF'),
+               textfont = list(color = '#000000', size = 12),
+               #hoverinfo = 'text',
+               #text = ~paste('$', X1960, ' billions'),
+               marker = list(colors = colors,
+                             line = list(color = '#FFFFFF', width = 1)),
+               #The 'pull' attribute can also be used to create space between the sectors
+               showlegend = F,  direction =  "counterclockwise", rotation = 195) %>%
+    layout(title = paste( "<b>",  "The information I just listed to you about the group, name, chairperson,\n number of members, does this sound like your group or does\n it actually sound like another group? I know it is a long time \n ago but if you think the information is wrong,\n please tell me about it.”(Uganda n=153)Int-25", "<b>", sep = ""),
+           paper_bgcolor="#F9F5EA",
+           plot_bgcolor="#F9F5EA",
+           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+plot_ly(data=data.frame(table(ML$Q_25)),labels=~Var1,values =~Freq,type= "pie",
+             # textposition = '',
+               textinfo = 'label+percent',
+               insidetextfont = list(color = '#FFFFFF'),
+               textfont = list(color = '#000000', size = 14),
+               #hoverinfo = 'text',
+               #text = ~paste('$', X1960, ' billions'),
+               marker = list(colors = colors,
+                             line = list(color = '#FFFFFF', width = 1)),
+               #The 'pull' attribute can also be used to create space between the sectors
+               showlegend = F,  direction =  "counterclockwise", rotation = 170) %>%
+    layout(title = paste( "<b>",  "The information I just listed to you about the group, name, chairperson,\n number of members, does this sound like your group or does\n it actually sound like another group? I know it is a long time \n ago but if you think the information is wrong,\n please tell me about it. (Mali n=153) Int-25", "<b>", sep = ""),
+           paper_bgcolor="#F9F5EA",
+           plot_bgcolor="#F9F5EA",
+           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+           margin = m)
+
+```
+
+# Are there months when the group is meeting more? Which ones?
+
+```{r}
+Q_35 <- df[,grep("Country|A_35",names(df)),with = F]
+Q_35[Q_35$Country=="-"]<-NA
+names(Q_35)<-c("Country","January","February","March","April","May","June","July","August","September","October","November","December","We meet on regular intervals on every month ")
+dt <-melt(Q_35,id.vars="Country")
+
+dt$variable<- factor(dt$variable,levels = c("January","February","March","April","May","June","July","August","September","October","November","December","We meet on regular intervals on every month "))
+setDT(dt)
+dt[,value:=ifelse(value==1,"Yes",ifelse(value==0,"No",NA))]
+y  = dt %>% drop_na() %>% ggplot(aes(x=variable,fill =value))+geom_bar(,position ="fill")+labs(title ="Are there months when the group is meeting more? \nWhich ones? INT-35")+facet_wrap(~Country)+coord_flip()+theme1+scale_fill_manual(values =colors)
+print("Original")
+y
+print("graph in plotly")
+ggplotly(y)
+
+```
+
+# Are there months when the group is meeting less? Which ones?
+
+```{r}
+Q_35 <- df[,grep("Country|A_36",names(df)),with = F]
+Q_35[Q_35$Country=="-"]<-NA
+names(Q_35)<-c("Country","January","February","March","April","May","June","July","August","September","October","November","December","We meet on regular intervals on every month ")
+dt <-melt(Q_35,id.vars="Country")
+
+dt$variable<- factor(dt$variable,levels = c("January","February","March","April","May","June","July","August","September","October","November","December","We meet on regular intervals on every month "))
+setDT(dt)
+dt[,value:=ifelse(value==1,"Yes",ifelse(value==0,"No",NA))]
+y =dt %>% drop_na() %>% ggplot(aes(x=variable,fill =value))+geom_bar(,position ="fill")+labs(title ="Are there months when the group is meeting less?\n Which ones? INT-36")+facet_wrap(~Country)+coord_flip()+theme1+scale_fill_manual(values =colors)
+print("Original graph")
+y
+print("graph in plotly")
+ggplotly(y)
+```
+
+
+# At what time of the day does the group meet?
+
+```{r}
+Q_37 <- df[,grep("Country|Q_37",names(df)),with = F]
+Q_37[,time:=substr(as.character(Q_37),11,13)]
+cals<-Q_37
+UG <- cals[cals$Country=="Uganda"]
+ML <- cals[cals$Country=="Mali"]
+x1 =UG%>%ggplot(aes(y =as.numeric(time)))+geom_boxplot(fill=colors[1])+scale_fill_manual(name = "",values=colors)+
+  theme1+scale_y_continuous(breaks=seq(6,22,by =1))+coord_cartesian(ylim = c(6,22))+labs(title ="At what time of the day does the group meet? (Uganda) Int-37",x = "n=153",y ="Time in 24hr system")
+x =ML%>%ggplot(aes(y =as.numeric(time)))+geom_boxplot(fill=colors[1])+scale_fill_manual(name = "",values=colors)+
+  theme1+scale_y_continuous(breaks=seq(6,22,by =1))+coord_cartesian(ylim = c(6,22))+labs(title ="At what time of the day does the group meet? (Mali) Int-37",x ="n=153",y ="Time in 24 hr system")
+ggplotly(x)
+ggplotly(x1)
+
+```
+
+# When was the last group-meeting?
+
+```{r}
+Q_31<-df[,grep("Country|Q_31|Date$",names(df)),with =F]
+#Q_31 <- Q_31[,c(1,4,5)]
+Q_31[,diff:=difftime(Date, Q_31, units = "days")]
+Q_31[,diff:=ifelse(diff<0,NA,ifelse(diff>300,NA,round(diff)))]
+Q_31$Country[Q_31$Country=="-"]<-NA
+#setDF(Q_31)
+ug<-subset(Q_31,Country =="Uganda")
+ml<-subset(Q_31,Country=="Mali")
+x =ug%>%drop_na()%>%ggplot(aes(y =diff))+geom_boxplot(fill=colors[1])+scale_fill_manual(name = "",values=colors)+
+  theme1+scale_y_continuous(breaks=seq(0,60,by =5))+coord_cartesian(ylim = c(0,60))+labs(title ="When was the last group-meeting? Int-31", "Mali n=160                                     Uganda n=138",y ="Days Ago")
+x1<-ml%>%drop_na()%>%ggplot(aes(y =diff))+geom_boxplot(fill=colors[1])+scale_fill_manual(name = "",values=colors)+
+  theme1+scale_y_continuous(breaks=seq(0,60,by =5))+coord_cartesian(ylim = c(0,60))+labs(title ="When was the last group-meeting? Int-31", "Mali n=160                                     Uganda n=138",y ="Days Ago")+facet_wrap(~Country)+coord_cartesian(ylim =c(0,20))+scale_y_continuous(breaks =seq(0,20,2))
+ggplotly(x)
+ggplotly(x1)
+Q_31%>%drop_na()%>%group_by(Country)%>%count()
+```
+
+# When do you expect the next group meeting to take place?
+
+```{r}
+Q_33<-df[,grep("Country|Q_33|Date$",names(df)),with =F]
+library(data.table)
+#Q_33 <- Q_33[,c(1,4,5)]
+Q_33[,diff:=difftime( Q_33,Date, units = "days")]
+Q_33[,diff1:=ifelse(diff<0,NA,round(diff))]
+Q_33$Country[Q_33$Country=="-"]<-NA
+ug<-subset(Q_33,Country=="Uganda")
+ml<-subset(Q_33,Country=="Mali")
+x=ug%>%drop_na()%>%ggplot(aes(y =diff1))+geom_boxplot(fill=colors[1])+scale_fill_manual(name = "",values=colors)+
+  theme1+scale_y_continuous(breaks=seq(0,35,by =2))+coord_cartesian(ylim = c(0,35))+labs(title ="When do you expect the next group meeting to take place? Int-33","Mali n=151                                     Uganda n=142",y ="Time in days")+facet_wrap(~Country)
+ggplotly(x)
+x=ml%>%drop_na()%>%ggplot(aes(y =diff1))+geom_boxplot(fill=colors[1])+scale_fill_manual(name = "",values=colors)+
+  theme1+scale_y_continuous(breaks=seq(0,35,by =2))+coord_cartesian(ylim = c(0,35))+labs(title ="When do you expect the next group meeting to take place? Int-33","Mali n=151                                     Uganda n=142",y ="Time in days")+facet_wrap(~Country)
+ggplotly(x)
+Q_33%>%drop_na()%>%group_by(Country)%>%count()
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

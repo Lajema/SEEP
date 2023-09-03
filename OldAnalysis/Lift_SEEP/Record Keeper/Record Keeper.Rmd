@@ -1,0 +1,724 @@
+---
+title: "Record Keepers Report"
+author: "John Kamau"
+date: "18/07/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,fig.width = 10,fig.height = 7)
+options(scipen=999)
+```
+```{r}
+library(tidyverse)
+library(knitr)
+library(data.table)
+library(readxl)
+source("theme.R")
+colors <- c("#118467", "#A9711E", "#6D847A", "#BB8755", "#82ACA0", "#9C7F61",
+            "#D88523", "#83A593", "#E6A168", "#9DD0C0", "#BE9D7C", "#A2C8B9",
+            "#EBCABA", "#A1DBD3")
+#df <- read_excel("D:/Kamau Lift/SEEP/Record Keeper/SEEP-Recordkeeper Interview_2019_18_07_12_48.xlsx")
+combined <- read_excel("D:/Kamau Lift/SEEP/combined.xlsx")
+df<-combined[,grep("Country|RECORD",names(combined))]
+G<-data.table(names(df))
+G[,Clean:=gsub("SEEP_RECORDKEEPER_","",V1)]
+names(df)<-G$Clean
+
+setDT(df)
+
+```
+
+# Q7	Do you have a specific designation or role in the group?	
+
+```{r}
+q7<-df[,grep("Country|Q_7",names(df)),with =F]
+useful <-q7[,c(1:3)]
+useful[,Role:=ifelse(Q_7==1,"Yes (please specify)",ifelse(Q_7==2,"No",NA))]
+useful$Role <-factor(useful$Role,levels =c("Yes (please specify)","No","Respondents"))
+B <- useful[,c(1,4)]%>%drop_na()%>%group_by(Country,Role)%>%dcast(Role~Country)
+rbind(B,c("Respondents",colSums(B[,2:3],na.rm=T)))%>%kable()
+
+useful[,Q_7_S :=str_to_lower(Q_7_S)]
+useful[,Q_7_S :=gsub("caisiere|caissier|caissière|caissiere|caissières","Caissière",Q_7_S)]
+useful[,Q_7_S :=gsub("chargé de compte l'argent","charge de compter l'argent",Q_7_S)]
+useful[,Q_7_S :=gsub("chargé de compte l'argent","charge de compter l'argent",Q_7_S)]
+#useful[,Q_7_S :=gsub(str_detect(Q_7_S,"keeper"),"record Keeper",Q_7_S)]
+useful[str_detect(Q_7_S,"keeper|record")]$Q_7_S <-"Record Keeper"
+useful[str_detect(Q_7_S,"sec|writting|writing")]$Q_7_S <-"Record Keeper"
+useful[str_detect(Q_7_S,"compt")]$Q_7_S <-"compte l'argent"
+useful[str_detect(Q_7_S,"déten")]$Q_7_S <-"détentrice de la caisse"
+useful[str_detect(Q_7_S,"garder")]$Q_7_S <-"garder l'argent"
+useful[str_detect(Q_7_S,"tenir")]$Q_7_S <-"tenir des registres"
+useful[str_detect(Q_7_S,"trés")]$Q_7_S <-"trésorière"
+B<-useful%>%drop_na()%>%group_by(Country,Q_7_S)%>%dcast(Q_7_S~Country)
+#rbind(B,c("",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+#B
+```
+
+# Q7	Do you have a specific designation or role in the group? (Answered Yes)	
+
+```{r}
+
+rbind(B,c("Respondents",colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q8	And in that role, what are your duties?   Thank you. And what else? (Multiple Selection)
+
+```{r}
+q7<-df[,grep("Country|A_8",names(df)),with =F]
+names(q7)<-c("Country","Keep written financial records","Remember how much people owe","Decide the penalties that members pay","Resolve conflicts around repayment","Resolve other conflicts between members","Train someone else to help keep the records","Compute the share out","It is an honorary or ceremonial post with no duties","Other (please specify)","Keep the savings balance safe","bring savings to the account","conduct all responsibilities with the account")
+q7.melt <-melt(q7,id.vars = "Country")
+#q7.melt[,Value:=ifelse(value==1,"Keep written financial records",ifelse(value==2,"Remember how much people owe",ifelse(value==3,"Decide the penalties that members pay",ifelse(value==4,"Resolve conflicts around repayment",ifelse(value==5,"Resolve other conflicts between members",ifelse(value==6,"Train someone else to help keep the records",ifelse(value==7,"Compute the share out",ifelse(value==8,"It is an honorary or ceremonial post with no duties",ifelse(value==9,"Other (please specify)",ifelse(value==10,"Keep the savings balance safe",ifelse(value==11,"bring savings to the account",ifelse(value==12,"conduct all responsibilities with the account",NA))))))))))))]
+q7.melt$variable<-factor(q7.melt$variable,levels =c("Keep written financial records","Remember how much people owe","Decide the penalties that members pay","Resolve conflicts around repayment","Resolve other conflicts between members","Train someone else to help keep the records","Compute the share out",
+"It is an honorary or ceremonial post with no duties","Other (please specify)","Keep the savings balance safe","bring savings to the account","conduct all responsibilities with the account","Respondents"))
+B<-q7.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+
+H <-q7 %>% group_by(Country) %>% tally()
+rbind(B,c("Respondents",H$n[1],H$n[2]))%>%kable()
+```
+
+# Q9	Are there other members who could fulfill your post, if you were not around? (Multiple Selection)	
+
+```{r}
+q7<-df[,grep("Country|A_9",names(df)),with =F]
+names(q7)<-c("Country","Yes, many","Yes, a few","I am training my replacement now","No, I am necessary.","I don’t know")
+q7.melt <-melt(q7,id.vars ="Country")
+#q7.melt[,Q_9:=value]
+#q7.melt[,Qualified:=ifelse(Q_9==1,"Yes, many",ifelse(Q_9==2,"Yes, a few",ifelse(Q_9==3,"I am training my replacement now",ifelse(Q_9==4,"No, I am necessary.",ifelse(Q_9==5,"I don’t know",NA)))))]
+q7.melt$variable <-factor(q7.melt$variable,levels = c('Yes, many','Yes, a few','I am training my replacement now','No, I am necessary.','I don’t know','Respondents'))
+B<-q7.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+H <-q7 %>% drop_na() %>% group_by(Country) %>% tally()
+rbind(B,c("Respondents",H$n[1],H$n[2]))%>%kable()
+```
+
+# Q10	When was the group formed?	I don’t know
+
+```{r}
+library(janitor)
+q7<-df[,grep("Country|Q_10",names(df)),with =F]
+today = "2019-07-19"
+q7[,Formed:=difftime(today,Q_10,units = c("days"))]
+q7[,years:=ifelse(Formed>15000,NA,Formed/365.25)]
+q7[,Years:=ifelse(years<1,"less than 1 year",ifelse(years<6,"1-5years",ifelse(years<11,"6-10 years",ifelse(years<16,"11-15 years",ifelse(years>15,"Over 15 years",NA)))))]
+q7$Years <-factor(q7$Years,levels =c("less than 1 year","1-5years","6-10 years","11-15 years","Over 15 years","Respondents","Percentage"))
+
+B<-q7%>%drop_na()%>%group_by(Country,Years)%>%dcast(Years~Country)
+B<-rbind(B,c("Respondents",colSums(B[,2:3],na.rm=T)))
+# B[,2:3]<-as.numeric(B[,2:3])
+# per <- B %>%  adorn_percentages('col')
+# per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+# rbind(per,c("Percentage",c(1,1)))  %>% kable()
+# #B$Years<-c("less than 1 year","6-10 years", "11-15 years", "Over 15 years","Respondents")
+# B
+```
+
+# Q12	FUNCTION: How does the group operate?	
+
+```{r}
+q7<-df[,grep("Country|Q_12",names(df)),with =F]
+q7[,Operate:=ifelse(Q_12==1,"The group retains savings from meeting to meeting with prime purpose to lend out and give savings back (DISTRIBUTING ASCA)",ifelse(Q_12==2,"The group retains savings indefinitely and lends to members  for investment, household expenses, or to pay for members’ emergencies such as funerals (NON DISTRIBUTING ASCA)",ifelse(Q_12==3,"The group collects savings at every meeting, and gives all the collected funds to one member in turn, and the group retains no money from meeting to meeting (ROSCA)",ifelse(Q_12==4,"We do not collect savings",ifelse(Q_12==5,"Other (specify)",ifelse(Q_12==6,"Don’t know, can’t find out",NA))))))]
+q7$Operate <-factor(q7$Operate,levels =c('The group retains savings from meeting to meeting with prime purpose to lend out and give savings back (DISTRIBUTING ASCA)',
+"The group retains savings indefinitely and lends to members  for investment, household expenses, or to pay for members’ emergencies such as funerals (NON DISTRIBUTING ASCA)",
+"The group collects savings at every meeting, and gives all the collected funds to one member in turn, and the group retains no money from meeting to meeting (ROSCA)","We do not collect savings","Other (specify)","Don’t know, can’t find out","Respondents","Percentage"))
+
+B<-q7[,c(1,4)]%>%drop_na()%>%group_by(Country,Operate)%>%dcast(Operate~Country)
+rbind(B,c("Respondents",colSums(B[,2:3],na.rm=T)))%>%kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# Q13	PURPOSE: What is the primary reason the group came together?	
+
+```{r}
+q7<-df[,grep("Country|Q_13",names(df)),with =F]
+q7[,Reason:=ifelse(Q_13==1,"Non-specific financial services",ifelse(Q_13==2,"Farmers group",ifelse(Q_13==3,"Social group",ifelse(Q_13==4,"Funeral society",ifelse(Q_13==5,"Women’s group",ifelse(Q_13==6,"Business group",ifelse(Q_13==7,"Other (specify)",NA)))))))]
+q7$Reason <-factor(q7$Reason,levels =c('Non-specific financial services',"Farmers group","Social group",'Funeral society','Women’s group','Business group','Other (specify)',"Respondents","Percentage"))
+
+B<-q7[,c(1,4)]%>%drop_na()%>%group_by(Country,Reason)%>%dcast(Reason~Country)
+rbind(B,c("Respondents",colSums(B[,2:3],na.rm=T)))%>%kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# 21	How often does your group meet?	
+
+```{r}
+q7<-df[,grep("Country|Q_21",names(df)),with =F]
+q7[,meetings:=ifelse(Q_21==1,"Daily",ifelse(Q_21==2,"Weekly",ifelse(Q_21==3,"Every 2 weeks",ifelse(Q_21==4,"Monthly",ifelse(Q_21==5,"It is not regular",ifelse(Q_21==6,"Other (specify)",ifelse(Q_21==7,"I don’t know",NA)))))))]
+q7$meetings <-factor(q7$meetings,levels =c('Daily','Weekly','Every 2 weeks','Monthly','It is not regular','Other (specify)','I don’t know',"Respondents","Percentage"))
+B<-q7[,c(1,4)]%>%drop_na()%>%group_by(Country,meetings)%>%dcast(meetings~Country)
+rbind(B,c("Respondents",colSums(B[,2:3],na.rm=T)))%>%kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# # Q22	How much does everyone contribute at each ROSCA meeting?
+# 
+# ```{r}
+# q7<-df[,grep("Country|Q_22",names(df)),with =F]
+# q7[,Value:=ifelse(Q_22<0,NA,Q_22)]
+# 
+# q7%>%drop_na()%>%ggplot(aes(y=Value))+geom_boxplot(fill=colors[1])+facet_wrap(~Country)+labs(title ="How much does everyone contribute at each ROSCA meeting? SEEP-RK-22",x ="Uganda   n=13",y="contributions")+scale_y_continuous(breaks =seq(0,10000,by =1000))+theme1+scale_fill_manual(values = 'colors')
+# #q7%>%drop_na()%>%count()
+# #B<-q7[,c(1,4)]%>%drop_na()%>%group_by(Country,meetings)%>%count()%>%dcast(meetings~Country)
+# #rbind(B,c("",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+#```
+
+# Q23	How does the group save?
+
+```{r}
+q7<-df[,grep("Country|Q_23",names(df)),with =F]
+q7[,Savings:=ifelse(Q_23==1,"Each member saves exactly the same at every meeting during the cycle (but some members can save for 2 or 3 “mains”)",ifelse(Q_23==2,"Each member saves the same at each meeting, but the amount fluctuates according to the economic situation (hunger months, we save less) (but some members can save for 2 or 3)",ifelse(Q_23==3,"Each member can decide each meeting what to save, but minimum of one share, and there is a maximum number of shares",ifelse(Q_23==4,"Each member can decide each meeting, no minimum but a maximum number of shares",ifelse(Q_23==5,"Each member can decide each meeting what to save, no minimum, no maximum",ifelse(Q_23==6,"Other (specify)",ifelse(Q_23==7,"I don’t want to answer",NA)))))))]
+
+q7$Savings <-factor(q7$Savings,levels=c("Each member saves exactly the same at every meeting during the cycle (but some members can save for 2 or 3 “mains”)",
+"Each member saves the same at each meeting, but the amount fluctuates according to the economic situation (hunger months, we save less) (but some members can save for 2 or 3)",
+"Each member can decide each meeting what to save, but minimum of one share, and there is a maximum number of shares",
+"Each member can decide each meeting, no minimum but a maximum number of shares",
+"Each member can decide each meeting what to save, no minimum, no maximum","Other (specify)","I don’t want to answer","Respondents","Percentage"))
+B<-q7[,c(1,4)]%>%drop_na()%>%group_by(Country,Savings)%>%dcast(Savings~Country)
+rbind(B,c("Respondents",colSums(B[,2:3],na.rm=T)))%>%kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# Q25	How many members started this cycle?
+
+```{r}
+q7<-df[,grep("Country|Q_25",names(df)),with =F]
+q7[,Q_25:=ifelse(Q_25<0,NA,Q_25)]
+q7%>%drop_na()%>%ggplot(aes(y=Q_25))+geom_boxplot(fill=colors[1])+facet_wrap(~Country)+labs(title ="How many members started this cycle? SEEP-RK-25",y="Members")+scale_y_continuous(breaks =seq(0,100,by =5))+theme1+scale_fill_manual(values=colors)
+#B<-q7%>%drop_na()%>%group_by(Country,Savings)%>%count()%>%dcast(Savings~Country)
+#rbind(B,c("",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+q7%>%drop_na() %>% group_by(Country)%>%tally()
+```
+
+# Q26	At the beginning of current cycle, how many of those members were women?
+
+```{r}
+q7<-df[,grep("Country|Q_26",names(df)),with =F]
+q7[,Q_26:=ifelse(Q_26<0,NA,Q_26)]
+q7%>%drop_na()%>%ggplot(aes(y=Q_26))+geom_boxplot(fill=colors[1])+facet_wrap(~Country)+labs(title ="At the beginning of current cycle, how many of those members were women? SEEP-RK-26",y="Female Members")+scale_y_continuous(breaks =seq(0,100,by =5))+theme1+scale_fill_manual(values=colors)
+#B<-q7%>%drop_na()%>%group_by(Country,Savings)%>%count()%>%dcast(Savings~Country)
+#rbind(B,c("",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+q7%>%drop_na() %>% group_by(Country)%>%tally()
+```
+
+# Q27	Are members allowed to withdraw their savings during the cycle?	
+
+
+```{r}
+q7<-df[,grep("Country|Q_27",names(df)),with =F]
+q7[,Withdraw:=ifelse(Q_27==1,"Yes",ifelse(Q_27==2,"No",NA))]
+q7$Withdraw <-factor(q7$Withdraw,levels =c("Yes","No","Respondents","Percentage"))
+B<-q7%>%drop_na()%>%group_by(Country,Withdraw)%>%dcast(Withdraw~Country)
+rbind(B,c("Respondents",colSums(B[,2:3],na.rm=T)))%>%kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#q7%>%group_by(Country)%>%count()
+```
+
+<!-- # Q29	Do you remember what was the group’s FIRST share out amount? (so the very longest time ago -->
+<!-- * UGX/Dollar = 0.00027 -->
+<!-- * Mali CFA Franc (XOF)/Dollar = 0.0017 -->
+
+
+<!-- ```{r} -->
+<!-- q7<-df[,grep("Country|Q_29",names(df)),with =F] -->
+<!-- q7[,clean:=ifelse(Q_29<5,NA,Q_29)] -->
+<!-- ml <-q7[q7$Country=="Mali"] -->
+<!-- mg <-q7[q7$Country=="Uganda"] -->
+<!-- ml%>%drop_na()%>%ggplot(aes(y=clean*0.0017))+geom_boxplot(fill=colors[1])+facet_wrap(~Country)+labs(title ="Do you remember what was the group’s FIRST share out amount?",x ="Mali n =144 ",y="Share Amount in dollars")+scale_y_continuous(breaks =seq(0,1500,by =100))+theme1+scale_fill_manual(values=colors) -->
+<!-- mg%>%drop_na()%>%ggplot(aes(y=clean*0.00027))+geom_boxplot(fill=colors[1])+facet_wrap(~Country)+labs(title ="Do you remember what was the group’s FIRST share out amount?",x ="Uganda n=93",y="Members")+scale_y_continuous(breaks =seq(0,1000,by =5))+theme1+scale_fill_manual(values=colors) -->
+<!-- #B<-q7%>%drop_na()%>%group_by(Country,Withdraw)%>%count()%>%dcast(Withdraw~Country) -->
+<!-- #Wrbind(B,c("",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable() -->
+<!-- #q7%>%group_by(Country)%>%count() -->
+<!-- ``` -->
+
+# Q30	How many share outs do you remember and can you tell us about?
+
+```{r}
+q7<-df[,grep("Country|Q_30",names(df)),with =F]
+q7[q7$Q_30<0]<-NA
+q7%>%drop_na()%>%ggplot(aes(y=Q_30))+geom_boxplot(fill=colors[1])+facet_wrap(~Country)+labs(title ="How many share outs do you remember and can you tell us about? SEEP-RK-30",y="Number of share outs")+scale_y_continuous(breaks =seq(0,30,by =2))+theme1+scale_fill_manual(values=colors)
+
+#B<-q7%>%drop_na()%>%group_by(Country,Withdraw)%>%count()%>%dcast(Withdraw~Country)
+#rbind(B,c("",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+q7%>%drop_na() %>% group_by(Country)%>%tally()
+```
+
+# Q33	How many members participated in the share out?
+
+```{r}
+q7<-df[,grep("Country|Q_33",names(df)),with =F]
+cols = c("Country","Iteration1","iteration2","iteration3","iteration4","iteration5","iteration6","iteration7","iteration8","iteration9","iteration10","iteration11","iteration12","iteration13","iteration14","iteration15")
+names(q7)<-cols
+q7.melt <-melt(q7,id.vars ="Country")
+q7.melt[,Value:=ifelse(value<1,NA,value)]
+q7.melt%>%drop_na()%>%ggplot(aes(y=value,x =variable))+geom_boxplot(fill=colors[1])+facet_wrap(~Country)+labs(title ="How many members participated in the share out? SEEP-RK-33",y="Members in the share outs")+scale_y_continuous(breaks =seq(0,75,by =5))+theme1+scale_fill_manual(values=colors)+facet_grid(rows =vars(Country))
+
+#B<-q7%>%drop_na()%>%group_by(Country,Withdraw)%>%count()%>%dcast(Withdraw~Country)
+#rbind(B,c("",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+q7[,1:2] %>% drop_na() %>% group_by(Country) %>% tally()
+```
+
+# Q34	Were there any members who could not repay all their loans at share out?” (Multiple Selection)
+
+```{r}
+q7<-df[,grep("Country|Q_34",names(df)),with =F]
+names(q7) <-cols
+q7.melt <-melt(q7,id.vars = "Country")
+q7.melt[,Value:=ifelse(value==1,"yes",ifelse(value==2,"no",ifelse(value==3,"don’t know",NA)))]
+q7.melt$Value <-factor(q7.melt$Value,levels =c("yes","no","don’t know"))
+q7.melt%>%drop_na()%>%ggplot(aes(fill=Value,x =variable))+geom_bar(position ="fill")+theme1+scale_fill_manual(values =colors)+labs(title ="Were there any members who could not repay all their loans at share out? SEEP-RK-34"," Mali n=154             Uganda n =118")+facet_wrap(~Country)+facet_grid(rows =vars(Country))
+q7[,1:2]%>%drop_na() %>% group_by(Country)%>%tally()
+```
+
+# Q38	How many members does your group have today?
+
+```{r}
+q7<-df[,grep("Country|Q_38",names(df)),with =F]
+q7[,Q_38:=ifelse(Q_38<0,NA,Q_38)]
+q7%>%drop_na()%>%ggplot(aes(y=Q_38))+geom_boxplot(fill=colors[1])+facet_wrap(~Country)+labs(title ="How many members does your group have today? SEEP-RK-38","Mali n =154            Uganda n=118",y="Female Members")+scale_y_continuous(breaks =seq(0,100,by =5))+theme1+scale_fill_manual(values=colors)
+#B<-q7%>%drop_na()%>%group_by(Country,Savings)%>%count()%>%dcast(Savings~Country)
+#rbind(B,c("",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+q7%>%drop_na() %>% group_by(Country)%>%tally()
+```
+
+# Q39	Thinking back to the most recent meeting of your group (Multiple Selection )
+	
+```{r,fig.width =10}
+q7<-df[,grep("Country|T_39",names(df)),with =F]
+names(q7)<-c("Country","members were actually present","not present, but were represented at the meeting by a family or friend?","not present or represented, but told the group in advance they wouldnt be absent?","not present or represented, but sent their savings in with another person?","members who were absent without reason, message or warning")
+q7.melt <-melt(q7,id.vars = "Country")
+q7.melt[,Value:=ifelse(value<0,NA,value)]
+q7.melt%>%drop_na()%>%ggplot(aes(y=Value,x =variable))+geom_boxplot(fill=colors[1])+facet_wrap(~Country)+labs(title ="Thinking back to the most recent \nmeeting of your group \nSEEP-RK-39","Uganda n =118            Mali n=154",y="Female Members")+scale_y_continuous(breaks =seq(0,50,by =5))+coord_cartesian(xlim =c(1,50))+ theme1+scale_fill_manual(values=colors)+coord_flip()+facet_grid(rows=vars(Country))
+#B<-q7%>%drop_na()%>%group_by(Country,Savings)%>%count()%>%dcast(Savings~Country)
+#rbind(B,c("",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+#q7%>%group_by(Country)%>%count()
+q7%>%drop_na() %>% group_by(Country)%>%tally()
+```
+
+# Q40	How are records kept in your group? What I mean by that, How do you know, from one meeting to the next, how much each person has saved, and each person has borrowed?	(Multiple Selection)
+
+```{r}
+q7<-df[,grep("Country|A_40",names(df)),with =F]
+names(q7)<-c("Country","Central ledger","Passbooks","Memory based system","Electronic recordkeeping application","Other (specify)","Don’t know, can’t say")
+q7.melt <-melt(q7,id.vars ="Country")
+q7.melt$value[q7.melt$value==-1]<-0
+#q7.melt[,Records:=ifelse(value==1,"Central ledger",ifelse(value==2,"Passbooks",ifelse(value==3,"Memory based system",ifelse(value==4,"Electronic recordkeeping application",ifelse(value==5,"Other (specify)",ifelse(value==6,"Don’t know, can’t say",NA))))))]
+q7.melt$variable <-factor(q7.melt$variable,levels =c('Central ledger','Passbooks','Memory based system','Electronic recordkeeping application','Other (specify)','Don’t know, can’t say',"Respondents"))
+B<-q7.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+
+H <-q7 %>% group_by(Country) %>% tally()
+rbind(B,c("Respondents",H$n[1],H$n[2]))%>%kable()
+```
+
+# Q41	When the group conducts a transaction (for example, a member deposits savings or makes a loan repayment) how is the money handled? (multiple Selection)
+
+
+```{r}
+q7<-df[,grep("Country|A_41",names(df)),with =F]
+names(q7)<-c("Country","Member brings it to the money counter(s), who counts the money and confirm the amount to the Recordkeeper","Member brings it to the money counter(s), who don't count the money and put it in a box","Member brings it to the Recordkeeper, who counts the money and confirms the amount","Member brings it to the Recordkeeper, the money is not counted, the amount is not confirmed","Group does not use cash (describe)","Other","Other")
+q7.melt <-melt(q7,id.vars ="Country")
+#q7.melt[,Records:=ifelse(value ==1,"Member brings it to the money counter(s), who counts the money and confirm the amount to the Recordkeeper",ifelse(value==2,"Member brings it to the money counter(s), who don't count the money and put it in a box",ifelse(value==3,"Member brings it to the Recordkeeper, who counts the money and confirms the amount",ifelse(value==4,"Member brings it to the Recordkeeper, the money is not counted, the amount is not confirmed",ifelse(value==5,"Group does not use cash (describe)",ifelse(value==6,"Other",ifelse(value==7,"Other",NA)))))))]
+q7.melt$variable <-factor(q7.melt$variable, levels =c('Member brings it to the money counter(s), who counts the money and confirm the amount to the Recordkeeper',
+"Member brings it to the money counter(s), who don't count the money and put it in a box",
+'Member brings it to the Recordkeeper, who counts the money and confirms the amount',
+"Member brings it to the Recordkeeper, the money is not counted, the amount is not confirmed",
+"Group does not use cash (describe)",
+'Other',"Respondents"))
+B<-q7.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+
+H <-q7[,1:2] %>% group_by(Country) %>% tally()
+rbind(B,c("Respondents",H$n[1],H$n[2]))%>%kable()
+
+#q7%>%group_by(Country)%>%count()
+```
+
+# Q42	How is money kept between meetings?	 (Multiple Selection)
+
+```{r}
+q7<-df[,grep("Country|A_42",names(df)),with =F]
+names(q7)<-c("Country","In a cashbox or other secure container. One person keeps the box, two or more people have keys","In a cashbox or other secure container. One person keeps the box, one person has keys","In a cashbox or other secure container. Same person keeps box and key.","In a box or container, unlocked.","Money is split up among members","Bank account","We don’t keep cash (describe how that works)","We never have cash because we lend out all the money","Other")
+q7.melt <-melt(q7,id.vars ="Country")
+#q7.melt[,Money:=ifelse(value==1,"In a cashbox or other secure container. One person keeps the box, two or more people have keys",ifelse(value==2,"In a cashbox or other secure container. One person keeps the box, one person has keys",ifelse(value==3,"In a cashbox or other secure container. Same person keeps box and key.",ifelse(value==4,"In a box or container, unlocked.",ifelse(value==5,"Money is split up among members",ifelse(value==6,"Bank account",ifelse(value==7,"We don’t keep cash (describe how that works)",ifelse(value==8,"We never have cash because we lend out all the money",ifelse(value==9,"Other",NA)))))))))]
+q7.melt$variable <-factor(q7.melt$variable,levels = c('In a cashbox or other secure container. One person keeps the box, two or more people have keys',"In a cashbox or other secure container. One person keeps the box, one person has keys",
+"In a cashbox or other secure container. Same person keeps box and key.",
+"In a box or container, unlocked.","Money is split up among members","Bank account","We don’t keep cash (describe how that works)","We never have cash because we lend out all the money","Other","Respondents","Percentage"))
+B<-q7.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+
+H <-q7 %>% group_by(Country) %>% tally()
+rbind(B,c("Respondents",H$n[1],H$n[2]))%>%kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#q7%>%group_by(Country)%>%count()
+```
+
+# Q44	Has your group ever had money stolen?	
+
+```{r}
+q7<-df[,grep("Country|Q_44",names(df)),with =F]
+q7[,Money:=ifelse(Q_44==1,"Yes",ifelse(Q_44==2,"No",ifelse(Q_44==3,"I don’t know",NA)))]
+q7$Money <-factor(q7$Money,levels =c("Yes","No","I don’t know","Respondents","Percentage"))
+B<-q7%>%drop_na()%>%group_by(Country,Money)%>%dcast(Money~Country)
+#rbind(B,c("",144,93))%>%kable()
+rbind(B,c("Respondents",colSums(B[,2:3],na.rm=T)))%>%kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#q7%>%group_by(Country)%>%count()
+```
+
+<!-- # Q45	How many times did the group have money stolen?	 -->
+
+<!-- ```{r} -->
+<!-- q7<-df[,grep("Country|Q_45",names(df)),with =F] -->
+<!-- q7[,Q_45:=ifelse(Q_45==-1,NA,Q_45)] -->
+<!-- table(q7$Q_45) -->
+<!-- B<-q7%>%drop_na()%>%group_by(Country,Money)%>%count()%>%dcast(Money~Country) -->
+<!-- #rbind(B,c("",144,93))%>%kable() -->
+<!-- rbind(B,c("",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable() -->
+<!-- #q7%>%group_by(Country)%>%count() -->
+<!-- ``` -->
+
+# Q47	Does your group still receive visits from {NGO name}?	
+
+```{r}
+q7<-df[,grep("Country|Q_47",names(df)),with =F]
+q7[,Visit:=ifelse(Q_47==1,"Yes",ifelse(Q_47==2,"No",NA))]
+q7$Visit <-factor(q7$Visit,levels =c("Yes","No","Respondents","Percentage"))
+B<-q7[,c(1:3)]%>%drop_na()%>%group_by(Country,Visit)%>%dcast(Visit~Country)
+#rbind(B,c("",144,93))%>%kable()
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#q7%>%group_by(Country)%>%count()
+```
+
+# Q48	How often does the group receive visits from {NGO name}?	
+
+```{r}
+q7<-df[,grep("Country|Q_48",names(df)),with =F]
+q7[,Visit:=ifelse(Q_48==1,"Every week",ifelse(Q_48==2,"Every two weeks",ifelse(Q_48==3,"Every month",ifelse(Q_48==4,"Every quarter",ifelse(Q_48==5,"Every half year",ifelse(Q_48==6,"Every year",ifelse(Q_48==7,"Sporadically, once every few years",ifelse(Q_48==8,"It varies",ifelse(Q_48==9,"Other (specify)",NA)))))))))]
+q7$Visit <-factor(q7$Visit,levels =c("Every week","Every two weeks","Every month","Every quarter","Every half year","Every year","Sporadically, once every few years","It varies","Other (specify)","Respondents","Percentage"))
+B<-q7[,c(1:3)]%>%drop_na()%>%group_by(Country,Visit)%>%dcast(Visit~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#H <-q7 %>% group_by(Country) %>% count()
+#rbind(B,c("Respondents",H$n[1],H$n[2]))%>%kable()
+```
+
+# Q50	Did someone help the group at last share-out?
+
+```{r}
+q7<-df[,grep("Country|Q_50",names(df)),with =F]
+q7[,Help:=ifelse(Q_50==1,"Yes",ifelse(Q_50==2,"No",NA))]
+q7$Help <-factor(q7$Help,levels =c("Yes","No","Respondents","Percentage"))
+B<-q7[,c(1:3)]%>%drop_na()%>%group_by(Country,Help)%>%dcast(Help~Country)
+#rbind(B,c("",144,93))%>%kable()
+rbind(B,c("Respondents",colSums(B[,c(2:3)]))) %>% kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#q7%>%group_by(Country)%>%count()
+```
+
+# Q51	Who provided help?	
+
+```{r}
+q7<-df[,grep("Country|Q_51",names(df)),with =F]
+q7[,Help:=ifelse(Q_51==1,"Volunteer or Village Agent or Replicator",ifelse(Q_51==2,"Another group",ifelse(Q_51==3,"NGO or CBO",ifelse(Q_51==4,"Government agency",ifelse(Q_51==5,"Religious institution (mosque, church, ...)",ifelse(Q_51==6,"Private company",ifelse(Q_51==7,Q_51_S,ifelse(Q_51==8,"None",ifelse(Q_51==9,"Does not want to answer",NA)))))))))]
+q7[,Help:=gsub("Former trainer of the group|the former trainer|The former trainer|Trainer","former trainer",Help)]
+q7[,Help:=gsub("l’enseignant","former trainer",Help)]
+B<-q7[,c(1,2,4)]%>%drop_na()%>%group_by(Country,Help)%>%dcast(Help~Country)
+#rbind(B,c("",144,93))%>%kable()
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#q7%>%group_by(Country)%>%count()
+```
+
+# Q52	Do you or anyone in your group know how to calculate the share out so that each person gets the right amount?	
+
+```{r}
+q7<-df[,grep("Country|Q_52",names(df)),with =F]
+q7[,calculate:=ifelse(Q_52==1,"Yes",ifelse(Q_52==2,"No",ifelse(Q_52==3,"I don’t know myself and I don’t know whether others can do it",NA)))]
+q7$calculate <-factor(q7$calculate,levels =c("Yes","No","I don’t know myself and I don’t know whether others can do it","Respondents","Percentage"))
+B<-q7%>%drop_na()%>%group_by(Country,calculate)%>%dcast(calculate~Country)
+#rbind(B,c("",144,93))%>%kable()
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# Q53	How many members know how to calculate the share-out?	
+
+```{r}
+q7<-df[,grep("Country|Q_53",names(df)),with =F]
+q7[,Q_53:=ifelse(Q_53<0,NA,Q_53)]
+q7%>%drop_na()%>%ggplot(aes(y=Q_53))+geom_boxplot(fill=colors[1])+facet_wrap(~Country)+labs(title ="How many members know how to calculate the share-out?	SEEP-RK-53","Mali n =105            Uganda n=71",y="Members")+scale_y_continuous(breaks =seq(0,30,by =1))+theme1+scale_fill_manual(values=colors)
+q7[,1:2] %>% drop_na() %>% group_by(Country) %>% tally()
+```
+
+# Q54	Why don’t more members know how to calculate the share-out?	(Multiple Selection)
+
+
+```{r}
+q7<-df[,grep("Country|A_54",names(df)),with =F]
+names(q7)<-c("Country","They don’t need to, we have enough, we are happy the way it is","They are not educated or literate","No one has shown us","Other:")
+q7.melt <-melt(q7,id.vars ="Country")
+q7.melt$value[q7.melt$value==-1]<-0
+#q7.melt[,Calc:=ifelse(value==1,"They don’t need to, we have enough, we are happy the way it is",ifelse(value==2,"They are not educated or literate",ifelse(value==3,"No one has shown us",ifelse(value==4,"Other:",NA))))]
+q7.melt$variable <-factor(q7.melt$variable,levels =c("They don’t need to, we have enough, we are happy the way it is","They are not educated or literate","No one has shown us","Other:","Respondents","Percentage"))
+B<-q7.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+#rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+H <-q7 %>% group_by(Country) %>% tally()
+rbind(B,c("Respondents",colSums(B[,2:3])))%>%kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+
+#q7%>%group_by(Country)%>%count()
+```
+
+# Q55	The most recent time you shared out, did all the members receive the amount they expected?	
+
+```{r}
+q7<-df[,grep("Country|Q_55",names(df)),with =F]
+q7[,calculate:=ifelse(Q_55==1,"Yes, all were content",ifelse(Q_55==2,"Yes, more or less, most were content",ifelse(Q_55==3,"No, a few challenged the amount they got",ifelse(Q_55==4,"No, some were very dissatisfied",ifelse(Q_55==5,"Other (specify)",NA)))))]
+q7$calculate <-factor(q7$calculate,levels =c("Yes, all were content","Yes, more or less, most were content","No, a few challenged the amount they got","No, some were very dissatisfied","Other (specify)","Respondents","Percentage"))
+B<-q7[,c(1,2,4)]%>%drop_na()%>%group_by(Country,calculate)%>%dcast(calculate~Country)
+#rbind(B,c("",144,93))%>%kable()
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# Q56	What caused the amount to be lower than expected?”(Multiple Selection)	
+
+```{r}
+q7<-df[,grep("Country|A_56",names(df)),with =F]
+names(q7)<-c("Country","We lost money from late loans","We lost money from external theft","We had a failed group investment","We lost money but we don’t know how","Some members were suspicious about calculations","Some members are never happy","Don’t know","other (specify)")
+q7.melt <-melt(q7,id.vars ="Country")
+q7.melt$value[q7.melt$value==-1]<-0
+#q7.melt[,Calc:=ifelse(value==1,"We lost money from late loans",ifelse(value==2,"We lost money from external theft",ifelse(value==3,"We had a failed group investment",ifelse(value==4,"We lost money but we don’t know how",ifelse(value==5,"Some members were suspicious about calculations",ifelse(value==6,"Some members are never happy",ifelse(value==7,"Don’t know",ifelse(value==8,"other (specify)",NA))))))))]
+q7.melt$variable <-factor(q7.melt$variable,levels =c("We lost money from late loans","We lost money from external theft","We had a failed group investment","We lost money but we don’t know how","Some members were suspicious about calculations",
+"Some members are never happy","Don’t know","other (specify)","Respondents","Percentage"))
+B<-q7.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+#rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+H <-q7 %>% group_by(Country) %>% tally()
+rbind(B,c("Respondents",colSums(B[,2:3])))%>%kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# Q57	How long is a savings cycle usually in months?
+
+```{r}
+q7<-df[,grep("Country|Q_57",names(df)),with =F]
+q7[,Q_57:=ifelse(Q_57<0,NA,Q_57)]
+q7%>%drop_na()%>%ggplot(aes(y=Q_57))+geom_boxplot(fill=colors[1])+facet_wrap(~Country)+labs(title ="	How long is a savings cycle usually in months? SEEP-RK-57","Mali n =141            Uganda n=101",y="Members")+scale_y_continuous(breaks =seq(0,50,by =2))+theme1+scale_fill_manual(values=colors)
+q7 %>% drop_na() %>% group_by(Country) %>% tally()
+```
+
+# Q58	How is the share-out calculated?	
+
+```{r}
+q7<-df[,grep("Country|Q_58",names(df)),with =F]
+q7[,calculate:=ifelse(Q_58==1,"Everybody gets back what they saved and paid (interest paid on loans goes back to the person paying)",ifelse(Q_58==2,"Everybody gets their saving back and the remainder split equally amongst the members",ifelse(Q_58==3,"Everybody gets their savings back and the interest is distributed proportionately",ifelse(Q_58==4,"All the money is split up evenly among all the members regardless of how they have saved.",ifelse(Q_58==5,"Everybody gets an exact share according to participation (1, 2 or 3 ‘mains’)",ifelse(Q_58==6,"I don’t know",ifelse(Q_58==7,"I don’t want to answer",ifelse(Q_58==8,"other (specify)",NA))))))))]
+q7$calculate <-factor(q7$calculate,levels =c("Everybody gets back what they saved and paid (interest paid on loans goes back to the person paying)","Everybody gets their saving back and the remainder split equally amongst the members","Everybody gets their savings back and the interest is distributed proportionately","All the money is split up evenly among all the members regardless of how they have saved.","Everybody gets an exact share according to participation (1, 2 or 3 ‘mains’)","I don’t know","I don’t want to answer","other (specify)","Respondents","Percentage"))
+B<-q7[,c(1,2,4)]%>%drop_na()%>%group_by(Country,calculate)%>%dcast(calculate~Country)
+#rbind(B,c("",144,93))%>%kable()
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# Q59	Does your group charge fines for members who break the rules?	
+
+```{r}
+q7<-df[,grep("Country|Q_59",names(df)),with =F]
+q7[,Fines:=ifelse(Q_59==1,"Yes",ifelse(Q_59==2,"No",ifelse(Q_59==3,"In principle yes but in reality no",ifelse(Q_59==4,"Other (specify)",NA))))]
+q7$Fines <-factor(q7$Fines,levels =c("Yes","No","In principle yes but in reality no","Other (specify)","Respondents","Percentage"))
+B<-q7[,c(1,2,4)]%>%drop_na()%>%group_by(Country,Fines)%>%dcast(Fines~Country)
+#rbind(B,c("",144,93))%>%kable()
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# Q60	What are some of the things that members are fined for?	(Multiple Selection)
+
+```{r}
+q7<-df[,grep("Country|A_60",names(df)),with =F]
+U<-copy(q7)
+names(q7)<-c("Country","Talking during meeting","Late to meeting","Late repayment","Not saving","Arguments, saying bad things","Phone ringing during meeting","Other:")
+q7 <-melt(q7,id.vars ="Country")
+#q7[,Q_60:=value]
+#q7[,Fines:=ifelse(Q_60==1,"Talking during meeting",ifelse(Q_60==2,"Late to meeting",ifelse(Q_60==3,"Late repayment",ifelse(Q_60==4,"Not saving",ifelse(Q_60==5,"Arguments, saying bad things",ifelse(Q_60==6,"Phone ringing during meeting",ifelse(Q_60==7,"Other:",NA)))))))]
+q7$variable <-factor(q7$variable,levels =c("Talking during meeting","Late to meeting","Late repayment","Not saving","Arguments, saying bad things","Phone ringing during meeting","Other:","Respondents"))
+B<-q7%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+#rbind(B,c("",144,93))%>%kable()
+#rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+H <-U[,1] %>% group_by(Country) %>% tally()
+rbind(B,c("Respondents",H$n[1],H$n[2]))%>%kable()
+```
+
+# Q61	Is the group registered with any government authority? E.g. with the municipality, ministry of cooperatives, chamber of commerce, etc.
+
+```{r}
+q7<-df[,grep("Country|Q_61",names(df)),with =F]
+q7[,Registration:=ifelse(Q_61==1,"Yes",ifelse(Q_61==2,"No",ifelse(Q_61==3,"I don’t know",ifelse(Q_61==4,"I don’t want to answer",ifelse(Q_61==5,"other (specify)",NA)))))]
+q7$Registration <-factor(q7$Registration,levels =c("Yes","No","I don’t know","I don’t want to answer","other (specify)","Respondents","Percentage"))
+B<-q7[,c(1,2,3)]%>%drop_na()%>%group_by(Country,Registration)%>%dcast(Registration~Country)
+#rbind(B,c("",144,93))%>%kable()
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# Q62	Does the group have a relationship with a financial service provider?	
+
+```{r}
+q7<-df[,grep("Country|Q_62",names(df)),with =F]
+q7[,Financial:=ifelse(Q_62==1,"Yes, as a group",ifelse(Q_62==2,"Yes, but individual members",ifelse(Q_62==3,"No, nobody has any relationship",ifelse(Q_62==4,"I don’t know",ifelse(Q_62==5,"I don’t want to answer",NA)))))]
+q7$Financial <-factor(q7$Financial,levels =c("Yes, as a group","Yes, but individual members","No, nobody has any relationship","I don’t know","I don’t want to answer","Respondents","Percentage"))
+B<-q7[,c(1,2,3)]%>%drop_na()%>%group_by(Country,Financial)%>%dcast(Financial~Country)
+#rbind(B,c("",144,93))%>%kable()
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# Q63	What type of relationship(s) does the group have with a financial service provider?	(Multiple Selection)
+
+```{r}
+q7<-df[,grep("Country|A_63",names(df)),with =F]
+names(q7)<-c("Country","Individual group members have accounts (unrelated to the group)",
+"Individual group members have loans (unrelated to the group, group not guaranteeing loan)",
+"Individual group members have accounts as a result of the group",
+"Individual group members have loans, related to the group, group guaranteeing loan or member’s track record helping to get the loan",
+"Group has an account (e.g. for excess funds)","Group has a loan from financial service provider","I don’t know","I don’t want to answer",
+"other (specify)")
+q7.melt <-melt(q7,id.vars ="Country")
+q7.melt$value[q7.melt$value==-1]<-0
+#q7.melt[,Relation:=ifelse(value==1,"Individual group members have accounts (unrelated to the group)",ifelse(value==2,"Individual group members have loans (unrelated to the group, group not guaranteeing loan)",ifelse(value==3,"Individual group members have accounts as a result of the group",ifelse(value==4,"Individual group members have loans, related to the group",ifelse(value==5,"group guaranteeing loan or member’s track record helping to get the loan",ifelse(value==5,"Group has an account (e.g. for excess funds)",ifelse(value==6,"Group has a loan from financial service provider",ifelse(value==7,"I don’t know",ifelse(value==8,"I don’t want to answer",ifelse(value==9,"other (specify)",NA))))))))))]
+q7.melt$variable <-factor(q7.melt$variable,levels =c("Individual group members have accounts (unrelated to the group)",
+"Individual group members have loans (unrelated to the group, group not guaranteeing loan)",
+"Individual group members have accounts as a result of the group","Individual group members have loans, related to the group", "group guaranteeing loan or member’s track record helping to get the loan",
+"Group has an account (e.g. for excess funds)",
+"Group has a loan from financial service provider",
+"I don’t know",
+"I don’t want to answer","other (specify)","Respondents","Percentage"))
+B<-q7.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#rbind(B,c("Respondents",144,53)) %>% kable()
+```
+
+# Q64	In what type of institution does the group have an account(?) (Multiple Selection)
+
+```{r}
+q7<-df[,grep("Country|A_64",names(df)),with =F]
+names(q7)<-c("Country","Commercial Bank","MDIs","MFIs","SACCOs","MNO (mobile money)","Other (specify)","I don’t want to answer")
+q7.melt <-melt(q7,id.vars ="Country")
+q7.melt$value[q7.melt$value ==-1]<-0
+
+#q7.melt[,Relation:=ifelse(value==1,"Commercial Bank",ifelse(value==2,"MDIs",ifelse(value==3,"MFIs",ifelse(value==4,"SACCOs",ifelse(value==5,"MNO (mobile money)",ifelse(value==6,"Other (specify)",ifelse(value==7,"I don’t want to answer",NA)))))))]
+q7.melt$variable<-factor(q7.melt$variable,levels=c("Commercial Bank","MDIs","MFIs","SACCOs","MNO (mobile money)","Other (specify)","I don’t want to answer","Respondents","Percentage"))
+B<-q7.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+#rbind(B,c("",144,93))%>%kable()
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# Q67	Does the group use mobile money for group activities?	
+
+```{r}
+q7<-df[,grep("Country|Q_67",names(df)),with =F]
+q7[,Mobile:=ifelse(Q_67==1,"Yes",ifelse(Q_67==2,"No",ifelse(Q_67==3,"I don’t know",ifelse(Q_67==4,"I don’t want to answer",NA))))]
+q7$Mobile<-factor(q7$Mobile,levels =c("Yes","No","I don’t know","I don’t want to answer","Respondents","Percentage"))
+B<-q7[,c(1,2,3)]%>%drop_na()%>%group_by(Country,Mobile)%>%dcast(Mobile~Country)
+#rbind(B,c("",144,93))%>%kable()
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# Q69	Does the group use any form of technology for recordkeeping? E.g. calculator on phone? an app on a phone to do bookkeeping?	
+
+```{r}
+q7<-df[,grep("Country|Q_69",names(df)),with =F]
+q7[,Tech:=ifelse(Q_69==1,"Yes",ifelse(Q_69==2,"No",NA))]
+q7$Tech<-factor(q7$Tech,levels =c("Yes","No","Respondents","Percentage"))
+B<-q7[,c(1,2,3)]%>%drop_na()%>%group_by(Country,Tech)%>%dcast(Tech~Country)
+#rbind(B,c("",144,93))%>%kable()
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# Q70	What forms of technology does the group use?	(Multiple Selection)
+
+```{r}
+q7<-df[,grep("Country|A_70",names(df)),with =F]
+names(q7)<-c("Country","Stand-alone calculator","Calculator on simple phone","Calculator on smart phone","Sending messages on simple phone","Sending messages on smart phone","Recording numbers or balances on simple phone","Recording numbers or balances on smart phone","Camera on simply phone","Camera on smart phone","Other (specify)")
+q7.melt <-melt(q7,id.vars ="Country")
+q7.melt$value[q7.melt$value==-1]<-0
+#q7.melt[,Q_70:=value]
+#q7.melt[,Tech:=ifelse(Q_70==1,"Stand-alone calculator",ifelse(Q_70==2,"Calculator on simple phone",ifelse(Q_70==3,"Calculator on smart phone",ifelse(Q_70==4,"Sending messages on simple phone",ifelse(Q_70==5,"Sending messages on smart phone",ifelse(Q_70==6,"Recording numbers or balances on simple phone",ifelse(Q_70==7,"Recording numbers or balances on smart phone",ifelse(Q_70==8,"Camera on simply phone",ifelse(Q_70==9,"Camera on smart phone",ifelse(Q_70==10,"Other (specify)",NA))))))))))]
+q7.melt$variable<-factor(q7.melt$variable,levels =c("Stand-alone calculator","Calculator on simple phone","Calculator on smart phone","Sending messages on simple phone",
+"Sending messages on smart phone","Recording numbers or balances on simple phone","Recording numbers or balances on smart phone","Camera on simply phone","Camera on smart phone","Other (specify)","Respondents","Percentage"))
+B<-q7.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+H <-q7[,1:2] %>% drop_na() %>% group_by(Country) %>% tally()
+rbind(B,c("Respondents",H$n[1],H$n[2]))%>%kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# Q74	What is the gender of the respondent?	
+
+```{r}
+q7<-df[,grep("Country|Q_74",names(df)),with =F]
+q7[,Gender:=ifelse(Q_74==1,"Female",ifelse(Q_74==2,"Male",NA))]
+B<-q7[,c(1,2,3)]%>%drop_na()%>%group_by(Country,Gender)%>%dcast(Gender~Country)
+#rbind(B,c("",144,93))%>%kable()
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% round(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+```
+
+# Q75	Could you estimate the age of the respondent?	I don't know
+
+```{r}
+q7<-df[,grep("Country|Q_75",names(df)),with =F]
+q7[q7$Q_75 <10]<-NA
+q7%>%drop_na()%>%ggplot(aes(y=Q_75))+geom_boxplot(fill=colors[1])+labs(title ="Could you estimate the age of the respondent? SEEP-RK-75",x = "Mali n=154              Uganda n=118",y="Estimated Age of Respondent")+theme1+scale_fill_manual(values=colors)+scale_y_continuous(breaks =seq(0,85,by =5))+facet_wrap(~Country)
+```
+

@@ -1,0 +1,133 @@
+---
+title: "Individual Clean"
+author: "John Kamau"
+date: "19/09/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,fig.width = 10,fig.height = 7)
+options(scipen=999)
+```
+
+
+```{r}
+# Libraries and dataset
+library(readxl)
+library(tidyverse)
+library(data.table)
+library(knitr)
+
+combined <- read_excel("D:/Kamau Lift/SEEP/combined.xlsx")
+df<-combined[,grep("Country|^ID$|INDIVUDUAL",names(combined))]
+
+
+ind1<-combined[,grep("Country|^ID$|INDIVUDUAL ONE",names(combined))]
+X =data.table(names(ind1))
+X[,cleaned:=gsub("SEEP_INDIVUDUAL FOUR_|SEEP_INDIVUDUAL ONE_|SEEP_INDIVUDUAL TWO_|SEEP_INDIVUDUAL THREE_","",V1)]
+names(ind1)<-X$cleaned
+ind2<-combined[,grep("Country|^ID$|INDIVUDUAL TWO",names(combined))]
+X =data.table(names(ind2))
+X[,cleaned:=gsub("SEEP_INDIVUDUAL FOUR_|SEEP_INDIVUDUAL ONE_|SEEP_INDIVUDUAL TWO_|SEEP_INDIVUDUAL THREE_","",V1)]
+names(ind2)<-X$cleaned
+ind3<-combined[,grep("Country|^ID$|INDIVUDUAL THREE",names(combined))]
+ind4<-combined[,grep("Country|^ID$|INDIVUDUAL FOUR",names(combined))]
+dt<-rbind(ind1,ind2,use.names=FALSE)
+
+
+
+
+setDT(df)
+
+```
+
+```{r}
+#Functions 
+clean <- function(df){
+  df[df==-1]<-NA
+  return(df)}
+```
+
+# 3	How would you describe your position in the group?
+
+```{r}
+dt <-df[,grep("Country|Q_3",names(df)),with =F]
+staker()
+
+dt.melt<-melt(dt,id.vars ="Country")
+dt.melt[,variable:=gsub("SEEP_INDIVUDUAL |_Q_3","",variable)]
+dt.melt[,value:=ifelse(value==1,"Chairperson",ifelse(value==2,"Record Keeper",ifelse(value==3,"Box-keeper",ifelse(value==4,"Money Counter",ifelse(value==5,"Key holder",ifelse(value==6,"General member",NA))))))]
+#dt.melt$variable<-factor(dt.melt$variable,levels =c("ONE","TWO","THREE","FOUR") )
+dt.melt$value <- factor(dt.melt$value,levels = c("Chairperson","Record Keeper","Box-keeper","Money Counter","Key holder","General member","Respondents"))
+dt.melt[dt.melt$Country=="-"]<-NA
+K<-dt.melt %>%drop_na() %>%  group_by(Country,value,variable) %>% dcast(value~Country+variable)
+rbind(K,c("Respondents",colSums(K[,c(2:9)],na.rm =T)))%>%kable()
+
+```
+
+# 4.How long have you been with this group?
+
+```{r}
+today <- "2019/06/28"
+q4 <- df[,grep("Country|Q_4$",names(df)),with=F]
+q4<-melt(q4,id.vars = "Country")
+q4[q4$Country=="-"]<-NA
+q4$today =today
+q4[,years:=difftime(today,value,unit ="days")]
+q4[,years1:=round(years/365.25)]
+q4[,years2:=ifelse(years1<50,years1,NA)]
+q4[,Years_in_Group:=ifelse(years2<1,"Less than 1 year",ifelse(years2<6,"1-5 years",ifelse(years2<11,"5-10 years",ifelse(years2<16,"10-15years","Above 16 years"))))]
+q4[,variable:=gsub("SEEP_INDIVUDUAL |_Q_4","",variable)]
+q4$Years_in_Group <- factor(q4$Years_in_Group,levels = c("Less than 1 year","1-5 years","5-10 years","10-15years","Above 16 years","Respondents"))
+K<-q4%>%drop_na()%>%group_by(Country,Years_in_Group,variable)%>%dcast(Years_in_Group~Country+variable)# 
+rbind(K,c("Respondents",colSums(K[,c(2:9)],na.rm =T)))%>%kable()
+
+```
+
+# Q_5.How many VSLAs are you a member of, including this group?	
+
+```{r}
+q5 <- df[,grep("Country|Q_5$",names(df)),with=F]
+q5<-melt(q5,id.vars="Country")
+q5[q5$Country=="-"]<-NA
+q5[,variable:=gsub("SEEP_INDIVUDUAL |_Q_5","",variable)]
+q5[,Member:=ifelse(value==1,"1 (only this group)",ifelse(value==2,"2 groups (one other apart from this group)",ifelse(value==3,"3 groups",ifelse(value==4,"4 groups",ifelse(value==5,"5 or more",ifelse(value==6,"I don’t want to say",NA))))))]
+
+K <- q5%>%drop_na()%>%group_by(Country,Member,variable)%>%count()%>%dcast(Member~Country+variable)
+rbind(K,c("Respondents",colSums(K[,c(2:9)],na.rm =T))) %>% kable()
+```
+
+<!-- # 6. Why are you member of several groups?	 -->
+
+<!-- ```{r} -->
+
+<!-- q6 <- df[,grep("Country|A_6",names(df)),with=F] -->
+<!-- q6[q6$Country=="-"]<-NA -->
+<!-- names(q6)<-c("Country","To be allowed to save more","To access more loans","To have my money spread, so less risk","To enjoy the different meetings and company of all the members","To learn more","Other (specify)","I don’t want to say") -->
+<!-- q6<-clean(q6) -->
+<!-- q6.melt <-melt(q6,id.vars ="Country") -->
+<!-- #q6.melt[,Reason:=ifelse(value==1,"To be allowed to save more",ifelse(value==2,"To access more loans",ifelse(value==3,"To have my money spread, so less risk",ifelse(value==4,"To enjoy the different meetings and company of all the members",ifelse(value==5,"To learn more",ifelse(value==6,"Other (specify)",ifelse(value==7,"I don’t want to say",NA)))))))] -->
+<!-- q6.melt$variable <- factor(q6.melt$variable,levels = c("To be allowed to save more","To access more loans","To have my money spread, so less risk","To enjoy the different meetings and company of all the members","To learn more","Other (specify)","I don’t want to say","Respondents")) -->
+<!-- K <-q6.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum) -->
+
+<!-- # colSums(K[,2:3],na.rm = T) -->
+<!-- # UG =data.frame(Reason =K$Reason, Yes =K$Uganda/300) -->
+<!-- # UG$No <- 1-UG$Yes -->
+<!-- # melt(UG,id.vars = "Reason")%>%ggplot(aes(x=Reason,y=value,fill = variable))+geom_bar(stat ='identity')+theme1+scale_fill_manual(values = colors)+theme(axis.text.x = element_text(angle =90))+coord_flip() -->
+<!-- rbind(K,c("Respondents",152,153))%>%kable() -->
+<!-- #q6[,1:2]%>%drop_na()%>%group_by(Country)%>%count() -->
+<!-- ``` -->
+
+# 7.How many VSLAs have you left in the past three years?	None
+
+```{r}
+q7 <- df[,grep("Country|Q_7",names(df)),with=F]
+q7[q7$Country=="-"]<-NA
+q7<-melt(q7,id.vars ="Country")
+q7[,variable:=gsub("SEEP_INDIVUDUAL |_Q_7","",variable)]
+q7[,Groups_left:=ifelse(value==1,"None",ifelse(value==2,"1",ifelse(value==3,"2",ifelse(value==4,"3",ifelse(value==5,"4 or more",NA)))))]
+#q6.melt[,c(1,4)]%>%drop_na()%>%group_by(Country,Groups_left)%>%count()%>%dcast(Groups_left~Country)%>%kable()
+q7$Groups_left <- factor(q7$Groups_left,levels =c('None','1','2','3',"4 or more","Respondents"))
+K<- q7%>%drop_na()%>%group_by(Country,Groups_left,variable)%>%count()%>%dcast(Groups_left~Country+variable)
+rbind(K,c("Respondents",colSums(K[,c(2:9)],na.rm =T)))%>%kable()
+```

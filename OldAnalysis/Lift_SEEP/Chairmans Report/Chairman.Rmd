@@ -1,0 +1,719 @@
+---
+title: "ChairPersons Report"
+author: "John Kamau"
+date: "11/07/2019"
+output: word_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,fig.width = 10,fig.height = 7)
+options(scipen=999)
+```
+
+```{r}
+library(knitr)
+library(readxl)
+library(tidyverse)
+library(data.table)
+source("theme.R")
+colors <- c("#118467", "#A9711E", "#6D847A", "#BB8755", "#82ACA0", "#9C7F61",
+            "#D88523", "#83A593", "#E6A168", "#9DD0C0", "#BE9D7C", "#A2C8B9",
+            "#EBCABA", "#A1DBD3")
+#df <- read_excel("D:/Kamau Lift/SEEP/Chairmans Report/SEEP-Chairperson Interview_2019_13_08_11_11_new.xlsx")
+combined <- read_excel("D:/Kamau Lift/SEEP/combined.xlsx")
+df<-combined[,grep("Country|^ID$|CHAIR",names(combined))]
+
+setDT(df)
+
+X =data.table(names(df))
+X[,cleaned:=gsub("SEEP_CHAIRPERSON_","",V1)]
+#view(head(X))
+names(df)<-X$cleaned
+setDT(df)
+```
+
+# Q_6.And are you the chairperson of the {0} VSLA?
+
+```{r}
+q6 = df[,grep('Country|Q_6$',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Position:= ifelse(Q_6==1,"Yes",ifelse(Q_6==2,"No, chairperson isn’t available, so you have me (please specify position",NA))]
+q6$Position<-factor(q6$Position,levels=c("Yes","No, chairperson isn’t available, so you have me (please specify position","Respondents"))
+B <- q6%>%drop_na()%>%group_by(Country,Position)%>%count()%>%dcast(Position~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q_8.Have you been with the group since the start?
+
+
+```{r}
+q6 = df[,grep('Country|Q_8$',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Position:= ifelse(Q_8==1,"Yes",ifelse(Q_8==2,"No",NA))]
+q6$Position<-factor(q6$Position,levels=c("Yes","No","Respondents"))
+B <- q6%>%drop_na()%>%group_by(Country,Position)%>%count()%>%dcast(Position~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+<!-- # Q_10.When did you become the chairperson?	 -->
+
+<!-- ```{r} -->
+<!-- q6 = df[,grep('Country|Q_10$',names(df)),with = F] -->
+<!-- q6[q6$Country=="-"]<-NA -->
+<!-- today = '2019-07-11' -->
+<!-- q6[,years:=difftime(today,q6$Q_10,units = 'days')] -->
+<!-- q6[,years:=years/365.5] -->
+<!-- q6[,clean:=ifelse(years>50,NA,years)] -->
+<!-- q6%>%drop_na()%>%ggplot(aes(y=clean))+geom_boxplot(fill=colors[1])+facet_wrap(~Country)+scale_y_continuous(breaks =seq(0,30,by =2))+labs(title ="When did you become the chairperson?	SEEP-CR-010",x="Respondents: Mali n=88                           Uganda n=90",y ='Chairpersons Duration in years')+scale_fill_manual(values = colors,name= "")+theme1 -->
+<!-- #q6 %>% drop_na() %>% group_by(Country) %>% count() -->
+<!-- ``` -->
+
+# Q_11.Have you been the chairperson continuously since that time?	
+
+```{r}
+q6 = df[,grep('Country|Q_11$',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Duration:=ifelse(Q_11==1,"Yes, continuously",ifelse(Q_11==2,"No, for a while someone else was chairperson",ifelse(Q_11==3,"Other (specify)",NA)))]
+q6$Duration <-factor(q6$Duration,levels= c("Yes, continuously","No, for a while someone else was chairperson","Other (specify)","Respondents"))
+B <-q6%>%drop_na()%>%group_by(Country,Duration)%>%count()%>%dcast(Duration~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q12. How did you become chairperson?	
+
+```{r}
+q6 = df[,grep('Country|Q_12$',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Method:=ifelse(Q_12==1,"I was elected with voting",ifelse(Q_12==2,'We talked about it and we agreed I should be chairperson',ifelse(Q_12==3,"I was appointed (e.g. by village leader, group trainer...)",ifelse(Q_12==4,"I appointed myself",ifelse(Q_12==5,"Other (specify)",ifelse(Q_12==6,"I don’t remember",ifelse(Q_12==7,"I don’t want to answer",NA)))))))]
+q6$Method <-factor(q6$Method,levels =c("I was elected with voting",'We talked about it and we agreed I should be chairperson',"I was appointed (e.g. by village leader, group trainer...)","I appointed myself","Other (specify)","I don’t remember","I don’t want to answer","Respondents"))
+B <-q6%>%drop_na()%>%group_by(Country,Method)%>%count()%>%dcast(Method~Country)
+rbind(B,c("Respondents",as.numeric(colSums(B[,2:3],na.rm=T)[1]),as.numeric(colSums(B[,2:3],na.rm=T)[2])))%>%kable()
+
+```
+
+# Q13. As chairperson, what are your duties?	(Multiple Selection)
+
+```{r}
+q6 = df[,grep('Country|A_13',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+names(q6)<-c("Country","Open or close the meetings","Oversee the meetings","Help the members stay disciplined","Decide the penalties that members pay","Resolve conflicts around repayment","Resolve other conflicts between members","Represent the group in the community","Train the group committee","Make sure the bookkeeping is correct","Train new members","It is an honorary or ceremonial post with no duties","Other( please specify)")
+q6.melt <- melt(q6,id.vars ="Country")
+#q6.melt[,Duty:=ifelse(value==1,"Open or close the meetings",ifelse(value==2,"Oversee the meetings",ifelse(value==3,"Help the members stay disciplined",ifelse(value==4,"Decide the penalties that members pay",ifelse(value==5,"Resolve conflicts around repayment",ifelse(value==6,"Resolve other conflicts between members",ifelse(value==7,"Represent the group in the community",ifelse(value==8,"Train the group committee",ifelse(value==9,"Make sure the bookkeeping is correct",ifelse(value==10,"Train new members",ifelse(value==11,"It is an honorary or ceremonial post with no duties",ifelse(value==12,"Other( please specify)",NA))))))))))))]
+q6.melt$variable <-factor(q6.melt$variable,levels=c("Open or close the meetings","Oversee the meetings","Help the members stay disciplined","Decide the penalties that members pay","Resolve conflicts around repayment","Resolve other conflicts between members","Represent the group in the community","Train the group committee","Make sure the bookkeeping is correct","Train new members","It is an honorary or ceremonial post with no duties","Other( please specify)","Respondents"))
+B<- q6.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+rbind(B,c("Respondents",152,143))%>%kable()
+#q6%>%group_by(Country)%>%count()
+```
+
+# Q_14.Are there other members who could fulfill the post of chairperson, if you were not around?	
+
+```{r}
+q6 = df[,grep('Country|Q_14',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Chairpersons_Replacement:=ifelse(Q_14==1,"Yes, many",ifelse(Q_14==2,"Yes, a few",ifelse(Q_14==3,"I am training my replacement now",ifelse(Q_14==4,"No, I am necessary",ifelse(Q_14==5,"I don't know",ifelse(Q_14==6,"Does not want to answer",NA))))))]
+q6$Chairpersons_Replacement<-factor(q6$Chairpersons_Replacement,levels= c("Yes, many","Yes, a few","I am training my replacement now","No, I am necessary","I don't know","Does not want to answer","Respondents"))
+B<- q6%>%drop_na()%>%group_by(Country,Chairpersons_Replacement)%>%count()%>%dcast(Chairpersons_Replacement~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q21	Did the group already exist under some other form before it was trained as a VSLA?	
+
+
+```{r}
+q6 = df[,grep('Country|Q_21',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Form:=ifelse(Q_21==1,"Yes",ifelse(Q_21==2,"No",NA))]
+q6$Form <-factor(q6$Form,levels =c("Yes","No","Respondents"))
+B<- q6%>%drop_na()%>%group_by(Country,Form)%>%count()%>%dcast(Form~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q22	What happened to the group membership after you received training?	
+
+```{r}
+q6 = df[,grep('Country|A_22',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+names(q6)<-c("Country","Some members left","Membership stayed the same","New members joined","I don't know","Does not want to answer")
+q6.melt =melt(q6,id.vars ="Country")
+#q6.melt[,Membership:=ifelse(value==1,"Some members left",ifelse(value==2,"Membership stayed the same",ifelse(value==3,"New members joined",ifelse(value==4,"I don't know",ifelse(value==5,"Does not want to answer",NA)))))]
+q6.melt$variable <-factor(q6.melt$variable,levels =c('Some members left','Membership stayed the same','New members joined',"I don't know",'Does not want to answer',"Respondents"))
+B<- q6.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+#rbind(B,c("",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+rbind(B,c("Respondents",154,124))%>%kable()
+```
+
+
+
+# Q_25.What organization did the trainer {0} work with?
+
+```{r}
+library(stringr)
+q6 = df[,grep('Country|Q_25',names(df)),with = F]
+q6 <-q6[,clean:=gsub("Aprocel|APLOCEL|APROCEL|Aprocel|APLOCEL","Approcel",Q_25)]
+q6 <-q6[,clean1:=gsub("C.A.E.B|CAEB|CAEB.","caeb",clean)]
+q6 <-q6[,clean1:=gsub("sepsel|SEPSEL|SESPEL","Sepsel",clean1)]
+q6 <-q6[,clean1:=gsub("JeD","JED",clean1)]
+q6 <-q6[,clean1:=gsub("Iganga district farmers association|Iganga District Farmers Association and CARE|Iganga farmers's association","Iganga farmers association",clean1)]
+q6 <-q6[,clean1:=gsub("Care international and RUDIFA|International Care|INTERNATIONAL CARE.|CARE and Iganga District farmers association|Care International|CARE INTERNATIONAL|CARE","care",clean1)]
+q6 <-q6[,clean1:=gsub("idfa","IDFA",clean1)]
+q6 <-q6[,clean1:=gsub(1,NA,clean1)]
+q6 <-q6[,clean1:=gsub("Approcel Bushenyi","Approcel",clean1)]
+q6 <-q6[,clean1:=gsub("from the church|from the diocese,","from diocese",clean1)]
+q6$Organization =q6$clean1
+q6[q6$Country=="-"]<-NA
+B<-q6%>%drop_na()%>%group_by(Country,Organization)%>%count()%>%dcast(Organization~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+#q6%>%drop_na()%>%group_by(Country)%>%count()
+```
+
+# Q_26.Did you ever support {0} with small gifts or money?	(Multiple Selection)
+
+
+```{r}
+q6 = df[,grep('Country|A_26',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+names(q6)<-c("Country","Yes, regular payments of money for training","yes. irregular payment of money","yes. frequent gifts of food, airtime, clothes, etc.","Yes, irregular gifts of food, airtime, clothes,etc.","Yes, money at share-out time","Other:","No","Don’t know")
+q6.melt =melt(q6,id.values ="Country")
+#q6.melt$Q_26 =q6.melt$value
+#q6.melt[,Support:=ifelse(Q_26==1,"Yes, regular payments of money for training",ifelse(Q_26==2,"yes. irregular payment of money",ifelse(Q_26==3,"yes. frequent gifts of food, airtime, clothes, etc.",ifelse(Q_26==4,"Yes, irregular gifts of food, airtime, clothes,etc.",ifelse(Q_26==5,"Yes, money at share-out time",ifelse(Q_26==6,"Other:",ifelse(Q_26==7,"No",ifelse(Q_26==8,"Don’t know",NA))))))))]
+q6.melt$variable <-factor(q6.melt$variable,levels =c("Yes, regular payments of money for training","yes. irregular payment of money","yes. frequent gifts of food, airtime, clothes, etc.","Yes, irregular gifts of food, airtime, clothes,etc.","Yes, money at share-out time","Other:","No","Don’t know","Respondents"))
+B<- q6.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+rbind(B,c("Respondents",152,143))%>%kable()
+
+```
+
+# Q27. Thinking about the training you received, which of the following best describes it?
+
+```{r}
+q6 = df[,grep('Country|Q_27',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Training:=ifelse(Q_27==1,"It was very good and we are independent",ifelse(Q_27==2,"It was good but we still appreciate help",ifelse(Q_27==3,"It was good but there are things we don’t know so we need help",ifelse(Q_27==4,"It was lacking some things (describe)",ifelse(Q_27==5,"I don’t know",ifelse(Q_27==6,"Other (specify)",NA))))))]
+q6$Training <-factor(q6$Training,levels =c("It was very good and we are independent","It was good but we still appreciate help","It was good but there are things we don’t know so we need help","It was lacking some things (describe)","I don’t know","Other (specify)","Respondents"))
+B<- q6[,c(1,4)]%>%drop_na()%>%group_by(Country,Training)%>%count()%>%dcast(Training~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+
+```
+
+# Q28. Does the group still receive visits from [NGO name]?	
+
+```{r}
+q6 = df[,grep('Country|Q_28$',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Visits:= ifelse(Q_28==1,"Yes",ifelse(Q_28==2,"No",ifelse(Q_28==3,"I don't know",NA)))]
+q6$Visits<-factor(q6$Visits,levels=c("Yes","No","I don't know","Respondents"))
+B <- q6%>%drop_na()%>%group_by(Country,Visits)%>%count()%>%dcast(Visits~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q30.Have you or any members of your group ever trained any other group to help them form their own VSLA?	
+
+```{r}
+q6 = df[,grep('Country|Q_30$',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Trainings:= ifelse(Q_30==1,"Yes",ifelse(Q_30==2,"No",ifelse(Q_30==3,NA,NA)))]
+q6$Trainings<-factor(q6$Trainings,levels=c("Yes","No","Respondents"))
+B <- q6%>%drop_na()%>%group_by(Country,Trainings)%>%count()%>%dcast(Trainings~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q34.	In the past, has your group ever gotten so big that some members left to start a new group?	
+
+
+```{r}
+q6 = df[,grep('Country|Q_34$',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Size:= ifelse(Q_34==1,"Yes",ifelse(Q_34==2,"No",ifelse(Q_34==3,"I don't know",NA)))]
+q6$Size<-factor(q6$Size,levels=c("Yes","No","I don't know","Respondents"))
+B <- q6%>%drop_na()%>%group_by(Country,Size)%>%count()%>%dcast(Size~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q38.	Do you think you yourself could train other people to form a new VSLA?	
+
+```{r}
+q6 = df[,grep('Country|Q_38$',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Trainings:= ifelse(Q_38==1,"Yes",ifelse(Q_38==2,"No",ifelse(Q_38==3,NA,NA)))]
+q6$Trainings<-factor(q6$Trainings,levels=c("Yes","No","Respondents"))
+B <- q6%>%drop_na()%>%group_by(Country,Trainings)%>%count()%>%dcast(Trainings~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+
+# Q41	Do you ever share new ideas with other groups?	
+
+```{r}
+q6 = df[,grep('Country|Q_41$',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Ideas:= ifelse(Q_41==1,"Yes",ifelse(Q_41==2,"No",ifelse(Q_41==3,NA,NA)))]
+q6$Ideas<-factor(q6$Ideas,levels=c("Yes","No","Respondents"))
+B <- q6%>%drop_na()%>%group_by(Country,Ideas)%>%count()%>%dcast(Ideas~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q43.	Have other groups ever shared new ideas with your group?	
+
+```{r}
+q6 = df[,grep('Country|Q_43$',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Ideas:= ifelse(Q_43==1,"Yes",ifelse(Q_43==2,"No",ifelse(Q_43==3,NA,NA)))]
+q6$Ideas<-factor(q6$Ideas,levels=c("Yes","No","Respondents"))
+B <- q6%>%drop_na()%>%group_by(Country,Ideas)%>%count()%>%dcast(Ideas~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q45	FUNCTION: How does your group operate?	
+
+```{r}
+q6 = df[,grep('Country|Q_45$',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Operations:=ifelse(Q_45==1,"The group retains savings from meeting to meeting with prime purpose to lend out and give savings back (DISTRIBUTING ASCA)",ifelse(Q_45==2,"The group retains savings indefinitely and lends to members  for investment, household expenses, or to pay for members’ emergencies such as funerals (NON DISTRIBUTING ASCA)",ifelse(Q_45==3,"The group collects savings at every meeting, and gives all the collected funds to one member in turn, and the group retains no money from meeting to meeting (ROSCA)",ifelse(Q_45==4,"We do not collect savings",ifelse(Q_45==5,"Other (specify)",ifelse(Q_45==6,"Don’t know, can’t find out",NA))))))]
+q6$Operations<-factor(q6$Operations,levels=c("The group retains savings from meeting to meeting with prime purpose to lend out and give savings back (DISTRIBUTING ASCA)",
+"The group retains savings indefinitely and lends to members  for investment, household expenses, or to pay for members’ emergencies such as funerals (NON DISTRIBUTING ASCA)",
+"The group collects savings at every meeting, and gives all the collected funds to one member in turn, and the group retains no money from meeting to meeting (ROSCA)","We do not collect savings","Other (specify)","Don’t know, can’t find out","Respondents"))
+B <- q6%>%drop_na()%>%group_by(Country,Operations)%>%count()%>%dcast(Operations~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q46.	PURPOSE: What is the primary reason the group came together?
+
+```{r}
+q6 = df[,grep('Country|Q_46$',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,purpose:=ifelse(Q_46==1,"Non-specific financial services",ifelse(Q_46==2,"Farmers group",ifelse(Q_46==3,"Social group",ifelse(Q_46==4,"Funeral society",ifelse(Q_46==5,"Women’s group",ifelse(Q_46==6,"Business group",ifelse(Q_46==7,"Other(specify)",NA)))))))]
+q6$purpose<-factor(q6$purpose,levels=c("Non-specific financial services","Farmers group","Social group","Funeral society","Women’s group","Business group","Other(specify)","Respondents"))
+B <- q6%>%drop_na()%>%group_by(Country,purpose)%>%count()%>%dcast(purpose~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q47	How does the group save?	
+
+
+```{r}
+q6 = df[,grep('Country|Q_47$',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Savings:=ifelse(Q_47==1,"Each member saves exactly the same at every meeting during the cycle (but some members can save for 2 or 3 “mains”)",ifelse(Q_47==2,"Each member saves the same at each meeting, but the amount fluctuates according to the economic situation (hunger months, we save less) (but some members can save for 2 or 3)",ifelse(Q_47==3,"Each member can decide each meeting what to save, but minimum of one share, and there is a maximum number of shares",ifelse(Q_47==4,"Each member can decide each meeting, no minimum but a maximum number of shares",ifelse(Q_47==5,"Each member can decide each meeting what to save, no minimum, no maximum",ifelse(Q_47==6,"Other (specify)",ifelse(Q_47==7,"I don’t want to answer",NA)))))))]
+q6$Savings <-factor(q6$Savings,levels =c("Each member saves exactly the same at every meeting during the cycle (but some members can save for 2 or 3 “mains”)",
+"Each member saves the same at each meeting, but the amount fluctuates according to the economic situation (hunger months, we save less) (but some members can save for 2 or 3)",
+"Each member can decide each meeting what to save, but minimum of one share, and there is a maximum number of shares",
+"Each member can decide each meeting, no minimum but a maximum number of shares",
+"Each member can decide each meeting what to save, no minimum, no maximum",
+"Other (specify)",
+"I don’t want to answer","Respondents"))
+B <- q6%>%drop_na()%>%group_by(Country,Savings)%>%count()%>%dcast(Savings~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+<!-- # Q52	You said your group periodically “shares out” – distributes the group funds among the members. When did you last share-out?	 -->
+
+<!-- ```{r} -->
+<!-- q6 = df[,grep('Country|Q_52$',names(df)),with = F] -->
+<!-- q6[q6$Country=="-"]<-NA -->
+<!-- q6[,Period:=difftime(today,Q_52,units ="days")] -->
+<!-- q6[,Period:=ifelse(Period>10000,NA,ifelse(Period<0,NA,Period/30))] -->
+<!-- q6%>%drop_na()%>%ggplot(aes(y  =Period))+geom_boxplot(fill =colors[1])+facet_wrap(~Country)+coord_cartesian(ylim =c(0,21))+scale_y_continuous(breaks=seq(0,21,by =2))+labs(title= "You said your group periodically “shares out” – distributes the group funds among the members. \n When did you last share-out? SEEP-CR-052" ,y ="Last Share Outs in Months",x ="Mali n=142       Uganda n=109")+theme(plot.title = element_text(hjust = 0.5))+scale_fill_manual(values =colors)+theme1 -->
+<!--  #B <- q6%>%drop_na()%>%group_by(Country,Savings)%>%count()%>%dcast(Savings~Country) -->
+<!-- #rbind(B,c("",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable() -->
+<!-- #q6%>%drop_na()%>%group_by(Country)%>%count() -->
+<!-- ``` -->
+
+# Q53	Did someone help the group at last share-out?	
+
+```{r}
+q6 = df[,grep('Country|Q_53',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Ideas:= ifelse(Q_53==1,"Yes",ifelse(Q_53==2,"No",ifelse(Q_53==3,NA,NA)))]
+q6$Ideas<-factor(q6$Ideas,levels=c("Yes","No","Respondents"))
+B <- q6%>%drop_na()%>%group_by(Country,Ideas)%>%count()%>%dcast(Ideas~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q54	Who provided help at last share-out?	
+
+```{r}
+q6 = df[,grep('Country|A_54',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+names(q6)<-c("Country","Volunteer or Village Agent or Replicator","Another group","NGO or CBO","Government agency","Religious institution (mosque, church, ...)","Private company","Other (specify)","None","Does not want to answer")
+q6.melt = melt(q6,id.vars = "Country")
+q6.melt$value[q6.melt$value==-1]<-NA
+#q6.melt[,Assistance:= ifelse(value==1,"Volunteer or Village Agent or Replicator",ifelse(value==2,"Another group",ifelse(value==3,"NGO or CBO",ifelse(value==4,"Government agency",ifelse(value==5,"Religious institution (mosque, church, ...)",ifelse(value==6,"Private company",ifelse(value==7,"Other (specify)",ifelse(value==8,"None",ifelse(value==9,"Does not want to answer",NA)))))))))]
+q6.melt$variable<- factor(q6.melt$variable, levels =c("Volunteer or Village Agent or Replicator","Another group","NGO or CBO","Government agency","Religious institution (mosque, church, ...)","Private company","Other (specify)","None","Does not want to answer","Respondents"))
+B <- q6.melt%>%drop_na()%>%group_by(variable,Country)%>%dcast(variable~Country,fun =sum)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q55	Do you or anyone in your group know how to calculate the share out so that each person gets the right amount?	
+
+```{r}
+q6 = df[,grep('Country|Q_55$',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Calc_Skills:= ifelse(Q_55==1,"Yes",ifelse(Q_55==2,"No",ifelse(Q_55==3,"I don’t know",ifelse(Q_55==4,"Other (specify)",NA))))]
+q6$Calc_Skills<-factor(q6$Calc_Skills,levels=c("Yes","No","I don’t know","Other (specify)","Respondents"))
+B <- q6%>%drop_na()%>%group_by(Country,Calc_Skills)%>%count()%>%dcast(Calc_Skills~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q57	Why don’t more members know how to calculate the share-out?	
+
+```{r}
+q6 = df[,grep('Country|A_57',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+names(q6)<-c("Country","They don’t need to, we have enough, we are happy the way it is","They are not educated or literate","No one has shown us","Other:")
+q6.melt = melt(q6,id.vars = "Country")
+#q6.melt[,Reason:=ifelse(value==1,"They don’t need to, we have enough, we are happy the way it is",ifelse(value==2,"They are not educated or literate",ifelse(value==3,"No one has shown us",ifelse(value==4,"Other:",NA))))]
+q6.melt$variable <-factor(q6.melt$variable,levels =c("They don’t need to, we have enough, we are happy the way it is",
+"They are not educated or literate","No one has shown us","Other:","Respondents"))
+q6.melt$value[q6.melt$value==-1]<-NA
+B <- q6.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q58	The most recent time you shared out, did all the members receive the amount they expected?	
+
+
+```{r}
+q6 = df[,grep('Country|Q_58$',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Expectations:= ifelse(Q_58==1,"all members were fully satisfied",ifelse(Q_58==2,"most members were receiving what they expected with a few having some minor issues",ifelse(Q_58==3,"quite some members had issues with the share out amount, it was less than expected",ifelse(Q_58==4,"all were disappointed with the share-out amount",NA))))]
+q6$Expectations<-factor(q6$Expectations,levels =c("all members were fully satisfied","most members were receiving what they expected with a few having some minor issues",
+"quite some members had issues with the share out amount, it was less than expected","all were disappointed with the share-out amount","Respondents"))
+B <- q6%>%drop_na()%>%group_by(Country,Expectations)%>%count()%>%dcast(Expectations~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q59	What caused the amount to be lower than expected?	
+
+
+```{r}
+q6 = df[,grep('Country|A_59',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+names(q6)<-c("Country","We lost money from late loans","We lost money from external theft","We had a failed group investment","We lost money but we don’t know how","Some members were suspicious or they are never happy","Don’t know","Other (specify)")
+q6.melt <- melt( q6,id.vars ="Country")
+#q6.melt[,Cause:=ifelse(value==1,"We lost money from late loans",ifelse(value==2,"We lost money from external theft",ifelse(value==3,"We had a failed group investment",ifelse(value==4,"We lost money but we don’t know how",ifelse(value==5,"Some members were suspicious or they are never happy",ifelse(value==6,"Don’t know",ifelse(value==7,"Other (specify)",NA)))))))]
+q6.melt$variable <-factor(q6.melt$variable,levels =c("We lost money from late loans","We lost money from external theft","We had a failed group investment","We lost money but we don’t know how","Some members were suspicious or they are never happy","Don’t know","Other (specify)","Respondents"))
+q6.melt$value[q6.melt$value==-1]<-NA
+B <- q6.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q60	How is the share-out calculated?	
+
+```{r}
+q6 = df[,grep('Country|Q_60$',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Calculated:=ifelse(Q_60==1,"Everybody gets back what they saved and paid (interest paid on loans goes back to the person paying)",ifelse(Q_60==2,"Everybody gets their saving back and the remainder split equally amongst the members",ifelse(Q_60==3,"Everybody gets their savings back and the interest is distributed proportionately",ifelse(Q_60==4,"All the money is split up evenly among all the members regardless of how they have saved.",ifelse(Q_60==5,"Everybody gets an exact share according to participation (1, 2 or 3 ‘mains’)",ifelse(Q_60==6,"I don’t know",ifelse(Q_60==8,"I don’t want to answer",ifelse(Q_60==9,"other (specify)",NA))))))))]
+q6$Calculated <- factor(q6$Calculated,levels =c("Everybody gets back what they saved and paid (interest paid on loans goes back to the person paying)",
+"Everybody gets their saving back and the remainder split equally amongst the members",
+"Everybody gets their savings back and the interest is distributed proportionately",
+"All the money is split up evenly among all the members regardless of how they have saved.",
+"Everybody gets an exact share according to participation (1, 2 or 3 ‘mains’)",
+"I don’t know",
+"I don’t want to answer",
+"other (specify)","Respondents"))
+B <- q6%>%drop_na()%>%group_by(Country,Calculated)%>%count()%>%dcast(Calculated~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# 63 Thank you. To follow up on what you said, I’m going to read some different categories of person. For each, please tell me whether they could be a member of your group?
+
+```{r}
+q6 = df[,grep('Country|T_63',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+names(q6)<-c("Country","Men","Women","Salaried People","People with Disabilities","Young children still in school","People Bad Reputation","Very Old","People with a Lot of Debt","People with a different religion","youth (15-17 and 18-24 and 25-34","people with HIV/AIDS","Single Women","Former/Current Sex Workers","polygamous men","wives of polygamous households")
+q6.melt =melt(q6,id.vars ="Country")
+q6.melt =melt(q6,id.vars ="Country")
+q6.melt$variable  <-factor(q6.melt$variable,levels =c("Men","Women","Salaried People","People with Disabilities","Young children still in school","People Bad Reputation","Very OLd","People with a Lot of Debt","People with a different religion","youth (15-17 and 18-24 and 25-34","people with HIV/AIDS","Single Women","Former/Current Sex Workers","polygamous men","wives of polygamous households"))
+q6.melt[,value1:=ifelse(value==1,"Yes",ifelse(value==2,"No",NA))]
+q6.melt$value1<-factor(q6.melt$value1,levels =c("No","Yes"))
+#q6.melt%>%group_by()
+q6.melt%>%drop_na()%>%ggplot(aes(x =variable,fill=value1))+geom_bar(position ="fill")+theme(axis.text.x  = element_text(angle = 90))+labs(title ="Groups of people and whether they are eligible to be group members \n SEEP-CR-063" ,x="Groups of people","Respondents  Mali n=  154         Uganda n=124")+theme1+scale_fill_manual(values =colors)+facet_wrap(~Country)+facet_grid(cols =vars(Country))+coord_flip()
+q6[,1:2] %>% drop_na()%>% group_by(Country) %>% count()
+```
+
+# 65	Does the VSLA group have any joint economic activity?	
+
+```{r}
+q6 = df[,grep('Country|Q_65$',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Activity:=ifelse(Q_65==1,"Yes",ifelse(Q_65==2,"No",ifelse(Q_65==3,"I don’t know",ifelse(Q_65==4,"I don’t want to answer",NA))))]
+q6$Activity<-factor(q6$Activity,levels=c("Yes","No","I don’t know","Other (specify)","Respondents"))
+B <- q6%>%drop_na()%>%group_by(Country,Activity)%>%count()%>%dcast(Activity~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q66	If so, please describe what these joint economic activities are?	
+
+
+```{r}
+q6 = df[,grep('Country|A_66',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+names(q6)<-c("Country","Joint production","Bulk purchases of inputs","Bulk selling/Joint marketing of output","Group business","Other (specify)")
+q6.melt <-melt(q6,id.vars ="Country")
+q6.melt[,Q_66:=value]
+q6.melt[,Activity:=ifelse(Q_66==1,"Joint production",ifelse(Q_66==2,"Bulk purchases of inputs",ifelse(Q_66==3,"Bulk selling/Joint marketing of output",ifelse(Q_66==4,"Group business",ifelse(Q_66==5,"Other (specify)",NA)))))]
+q6.melt$variable<-factor(q6.melt$variable,levels=c("Joint production","Bulk purchases of inputs","Bulk selling/Joint marketing of output","Group business","Other (specify)","Respondents"))
+B <- q6.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+
+# Q67. does the whole group do participate in {0}  or only some of the members?	
+
+
+```{r,fig.width=10,fig.height =7}
+q6 = df[,grep('Country|Q_67',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6.melt <-melt(q6,id.vars ="Country")
+q6.melt[,Activity:=ifelse(value==1,"Yes, as the whole group together",ifelse(value==2,"Yes, but only part of the group",ifelse(value==3,"No",ifelse(value==4,"I don’t know",ifelse(value==5,"I don’t want to answer",NA)))))]
+q6.melt$Activity<-factor(q6.melt$Activity,levels=c("Yes, as the whole group together","Yes, but only part of the group","No","I don’t know","I don’t want to answer","Respondents"))
+q6.melt%>%drop_na()%>%ggplot(aes(x =variable,fill=Activity))+geom_bar(position ="fill")+theme(axis.text.x  = element_text(angle = 90))+labs(title ="Groups Psrticipation in Activities  SEEP-CR-067" ,x="Groups of people","Mali N=26     Uganda N=13")+theme1+scale_fill_manual(values =colors)+facet_wrap(~Country)+facet_grid(cols =vars(Country))+coord_flip()
+B <- q6%>%drop_na()%>%group_by(Country)%>%count()
+B
+ #rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q68	Do the members trade with each other / provide each other business / refer customers to each other?	
+
+```{r}
+q6 = df[,grep('Country|Q_68',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Trade:=ifelse(Q_68==1,"Yes",ifelse(Q_68==2,"No",ifelse(Q_68==3,"I don’t know",ifelse(Q_68==4,"I don’t want to answer",NA))))]
+q6$Trade <-factor(q6$Trade,levels =c("Yes","No","I don’t know","I don’t want to answer","Respondents"))
+B <- q6%>%drop_na()%>%group_by(Country,Trade)%>%count()%>%dcast(Trade~Country)
+ rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q69	Does your group have any relationship(s) with the following types of organisations?	
+
+
+```{r}
+q6 = df[,grep('Country|A_69',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+names(q6)<-c("Country","NGOs","CBOs","Government agencies","Religious institutions (mosque, church, ...)","Political party","Private company","Other (specify)","None","Does not want to answer")
+q6.melt <-melt(q6,id.vars = "Country")
+#q6.melt[,Relation:=ifelse(value==1,"NGOs",ifelse(value==2,"CBOs",ifelse(value==3,"Government agencies",ifelse(value==4,"Religious institutions (mosque, church, ...)",ifelse(value==5,"Political party",ifelse(value==6,"Private company",ifelse(value==7,"Other (specify)",ifelse(value==8,"None",ifelse(value==9,"Does not want to answer",NA)))))))))]
+q6.melt$variable<-factor(q6.melt$variable,levels =c('NGOs','CBOs','Government agencies','Religious institutions (mosque, church, ...)','Political party','Private company','Other (specify)','None','Does not want to answer',"Respondents"))
+B <- q6.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+ rbind(B,c("Respondents",152,143))%>%kable()
+```
+
+<!-- # Q70	What type of relationship exist with organisation {0} ?	 -->
+
+
+<!-- ```{r} -->
+<!-- q6 = df[,grep('Country|A_70',names(df)),with = F] -->
+<!-- q6[q6$Country=="-"]<-NA -->
+<!-- names(q6)<-c("Country","Just contact (information exchange)","They supervise us","They advise us / awareness raising","They give us training","They sell to us","They help us with selling/finding clients","They give us market information/price information","They give us money","They give us loans","They give us in-kind goods","They help us build group network (savings group association)","They do research/ data collection","Other (specify)","I don’t want to answer") -->
+<!-- q6.melt <-melt(q6,id.vars = "Country") -->
+<!-- #q6.melt[,Relation:=ifelse(value==1,"Just contact (information exchange)",ifelse(value==2,"They supervise us",ifelse(value==3,"They advise us / awareness raising",ifelse(value==4,"They give us training",ifelse(value==5,"They sell to us",ifelse(value==6,"They help us with selling/finding clients",ifelse(value==7,"They give us market information/price information",ifelse(value==8,"They give us money",ifelse(value==9,"They give us loans",ifelse(value==10,"They give us in-kind goods",ifelse(value==11,"They help us build group network (savings group association)",ifelse(value==13,"They do research/ data collection",ifelse(value==14,"Other (specify)",ifelse(value==15,"I don’t want to answer",NA))))))))))))))] -->
+<!-- q6.melt$Relation <-factor(q6.melt$Relation,levels =c('Just contact (information exchange)',"They supervise us","They advise us / awareness raising",'They give us training', -->
+<!-- "They sell to us","They help us with selling/finding clients","They give us market information/price information", -->
+<!-- "They give us money","They give us loans","They give us in-kind goods","They help us build group network (savings group association)","They do research/ data collection","Other (specify)","I don’t want to answer","Respondents")) -->
+<!-- B <- q6.melt%>%drop_na()%>%group_by(Country,Relation)%>%count()%>%dcast(Relation~Country) -->
+<!--  rbind(B,c("Respondents",68,95))%>%kable() -->
+<!-- ``` -->
+
+# Q72	How satisfied are you with this relationship with the organisation {0} ?	
+
+```{r}
+q6 = df[,grep('Country|Q_72',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6.melt =melt(q6,id.vars ="Country")
+q6.melt[,Value:=ifelse(value==1,"Very satisfied",ifelse(value==2,"A little satisfied",ifelse(value==3,"Neutral",ifelse(value==4,"A little dissatisfied",ifelse(value==5,"Very dissatisfied",ifelse(value==6,"I don’t want to answer",NA))))))]
+q6.melt$Value<-factor(q6.melt$Value,levels =c("Very satisfied","A little satisfied","Neutral","A little dissatisfied","Very dissatisfied","I don’t want to answer","Respondents"))
+
+q6.melt[,c(1,2,4)]%>%drop_na()%>%ggplot(aes(x=variable,fill =Value))+geom_bar(position ="fill")+labs(title="How satisfied are you with this relationship with the organisation \n SEEP-CR-72","Mali n =3      Uganda n=47")+facet_wrap(~Country)+facet_grid(cols=vars(Country))+theme1+scale_fill_manual(values =colors)+coord_flip()
+q6[,1:2]%>%drop_na()%>%group_by(Country)%>%count()
+```
+
+# Q73	Does the group have a relationship with a financial service provider?	
+
+```{r}
+q6 = df[,grep('Country|Q_73',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Relation:=ifelse(Q_73==1,"Yes, as a group",ifelse(Q_73==2,"Yes, but individual members",ifelse(Q_73==3,"No, nobody has any relationship",ifelse(Q_73==4,"I don’t know",ifelse(Q_73==5,"I don’t want to answer",NA)))))]
+q6$Relation <-factor(q6$Relation,levels =c('Yes, as a group','Yes, but individual members','No, nobody has any relationship','I don’t know','I don’t want to answer',"Respondents"))
+B <- q6%>%drop_na()%>%group_by(Country,Relation)%>%count()%>%dcast(Relation~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q74	What type(s) of relationship does the group have with a financial service provider?	
+
+```{r}
+q6 = df[,grep('Country|A_74',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+names(q6)<-c("Country","Individual group members have accounts (unrelated to the group)","Individual group members have loans (unrelated to the group, group not guaranteeing loan)","Individual group members have accounts as a result of the group","Individual group members have loans, related to the group, group guaranteeing loan or member’s track record helping to get the loan","Group has an account (e.g. for excess funds)","Group has a loan from financial service provider","I don’t know","I don’t want to answer")
+q6.melt <-melt(q6,id.vars ="Country")
+#q6.melt[,Value:=ifelse(value==1,"Individual group members have accounts (unrelated to the group)",ifelse(value==2,"Individual group members have loans (unrelated to the group, group not guaranteeing loan)",ifelse(value==3,"Individual group members have accounts as a result of the group",ifelse(value==4,"Individual group members have loans, related to the group, group guaranteeing loan or member’s track record helping to get the loan",ifelse(value==5,"Group has an account (e.g. for excess funds)",ifelse(value==6,"Group has a loan from financial service provider",ifelse(value==7,"I don’t know",ifelse(value==8,"I don’t want to answer",NA))))))))]
+q6.melt$variable <-factor(q6.melt$variable,levels=c('Individual group members have accounts (unrelated to the group)','Individual group members have loans (unrelated to the group, group not guaranteeing loan)','Individual group members have accounts as a result of the group','Individual group members have loans, related to the group, group guaranteeing loan or member’s track record helping to get the loan','Group has an account (e.g. for excess funds)','Group has a loan from financial service provider','I don’t know','I don’t want to answer',"Respondents"))
+q6.melt$value[q6.melt$value==-1]<-NA
+B <- q6.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q75	In what type of institution(s) does the group have an account?	
+
+
+```{r}
+q6 = df[,grep('Country|A_75',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+names(q6)<-c("Country","Commercial Bank","MDIs","MFIs","Credit institutions","SACCOs","MNO (mobile money)","Other (specify)","I don’t want to answer")
+q6.melt <-melt(q6,id.vars ="Country")
+#q6.melt[,Value:=ifelse(value==1,"Commercial Bank",ifelse(value==2,"MDIs",ifelse(value==3,"MFIs",ifelse(value==4,"Credit institutions",ifelse(value==5,"SACCOs",ifelse(value==6,"MNO (mobile money)",ifelse(value==7,"Other (specify)",ifelse(value==8,"I don’t want to answer",NA))))))))]
+q6.melt$variable <- factor(q6.melt$variable,levels = c('Commercial Bank','MDIs','MFIs','Credit institutions','SACCOs','MNO (mobile money)','Other (specify)','I don’t want to answer',"respondents"))
+q6.melt$value[q6.melt$value==-1]<-NA
+B <- q6.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun =sum)
+rbind(B,c("respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q76	How did the group obtain its account?	
+
+```{r}
+q6 = df[,grep('Country|Q_76',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Account:=ifelse(Q_76==1,"Entirely group’s initiative/idea",ifelse(Q_76==2,"Due to information from outside entity",ifelse(Q_76==3,"Suggested by outside entity",ifelse(Q_76==4,"Recommended by outside entity",ifelse(Q_76==5,"Imposed by outside entity",ifelse(Q_76==6,"Given by outside entity",ifelse(Q_76==7,"I don’t know",ifelse(Q_76==8,"I don’t want to answer",NA))))))))]
+q6$Account <-factor(q6$Account,levels =c('Entirely group’s initiative/idea','Due to information from outside entity','Suggested by outside entity','Recommended by outside entity','Imposed by outside entity','Given by outside entity','I don’t know','I don’t want to answer',"respondents"))
+B <- q6%>%drop_na()%>%group_by(Country,Account)%>%count()%>%dcast(Account~Country)
+rbind(B,c("respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q80	Is the group registered with any local authority? E.g. with the municipality, ministry of cooperatives, chamber of commerce, etc.	
+
+```{r}
+q6 = df[,grep('Country|Q_80',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+#q6[q6$Q_76==-1]<-NA
+#q6%>%drop_na()%>%count()
+q6[,Register:=ifelse(Q_80==1,"Yes",ifelse(Q_80==2,"No",ifelse(Q_80==3,"I don’t know",ifelse(Q_80==4,"I don’t want to answer",NA))))]
+q6$Register <-factor(q6$Register,levels =c('Yes','No','I don’t know','I don’t want to answer',"Respondents"))
+B <- q6%>%drop_na()%>%group_by(Country,Register)%>%count()%>%dcast(Register~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+
+# Q81	Why is the group registered?	
+
+```{r}
+q6 = df[,grep('Country|Q_81',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+#q6[q6$Q_76==-1]<-NA
+#q6%>%drop_na()%>%count()
+q6[,Register:=ifelse(Q_81==1,"It is an obligation from the government",ifelse(Q_81==2,"We wanted to formalize our group / we wanted to register",ifelse(Q_81==3,"We needed the registration for getting a bank account",ifelse(Q_81==4,"We needed the registration for something else",ifelse(Q_81==5,"Other (specify)",NA)))))]
+q6$Register <-factor(q6$Register,levels =c('It is an obligation from the government',
+'We wanted to formalize our group / we wanted to register','We needed the registration for getting a bank account',
+'We needed the registration for something else','Other (specify)',"Respondents"))
+B <- q6[,c(1,4)]%>%drop_na()%>%group_by(Country,Register)%>%count()%>%dcast(Register~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q82	At which office did you register the group?	
+
+```{r}
+q6 = df[,grep('Country|Q_82',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+#q6[q6$Q_76==-1]<-NA
+#q6%>%drop_na()%>%count()
+q6[,Office:=ifelse(Q_82==1,"Department/Ministry of cooperatives",ifelse(Q_82==2,"Townhall",ifelse(Q_82==3,"Chamber of Commerce",ifelse(Q_82==4,"Mosque/church",ifelse(Q_82==5,Q_82_S,NA)))))]
+q6[,Office:=gsub("at sub county|at the subcounty|sub county|Sub county|subcountry|subcounty|subcouty","Sub-County",Office)]
+q6[,Office:=gsub("District level|district hq|district","District",Office)]
+q6$Office <-factor(q6$Office,levels =c('Department/Ministry of cooperatives','Townhall','Chamber of Commerce','Mosque/church',"District","Local council","Sub-County","Village level","respondents"))
+B <- q6[,c(1,4)]%>%drop_na()%>%group_by(Country,Office)%>%count()%>%dcast(Office~Country)
+rbind(B,c("respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q83	Did it cost any money to register?	
+
+```{r}
+q6 = df[,grep('Country|Q_83',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+#q6[q6$Q_76==-1]<-NA
+#q6%>%drop_na()%>%count()
+q6[,Cost:=ifelse(Q_83==1,"Yes",ifelse(Q_83==2,"no",ifelse(Q_83==3,"I don’t know",NA)))]
+q6$Cost<-factor(q6$Cost,levels =c('Yes','no','I don’t know',"Respondents"))
+B <- q6[,c(1,3)]%>%drop_na()%>%group_by(Country,Cost)%>%count()%>%dcast(Cost~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+```
+
+# Q84	How much did the registration cost?	
+
+* UGX/Dollar = 0.00027
+* Mali CFA Franc (XOF)/Dollar = 0.0017
+
+
+```{r}
+q6 = df[,grep('Country|Q_84',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[q6$Q_84<5]<-NA
+ug <- q6[q6$Country=="Uganda"]
+mali <-q6[q6$Country=="Mali"]
+U<-ggplot(ug,aes(y=Q_84*0.00027))+geom_boxplot(fill=colors[1])+theme1+scale_fill_manual(values=colors)+labs(title="How much did the registration cost? \n SEEP-CR-84","Uganda n=53",y="Cost in Dollars")+scale_y_continuous(breaks=seq(0,45,by=2))
+M<-ggplot(mali,aes(y=Q_84*0.0017))+geom_boxplot(fill=colors[1])+theme1+scale_fill_manual(values=colors)+labs(title="How much did the registration cost? \n SEEP-CR-84","Mali n=17",y="Cost in Dollars")+scale_y_continuous(breaks=seq(0,52,by=5))+coord_cartesian(ylim =c(0,50))
+library(gridExtra)
+grid.arrange(U,M,ncol =2)
+q6 %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# Q85	What are the benefits of registration?	(Multiple Selection)
+
+```{r}
+q6 = df[,grep('Country|A_85',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+names(q6)<-c("Country","Members take the group more seriously","Outsiders take the group more seriously","We can access support","We can open a bank-account","Other (specify)")
+q6.melt <-melt(q6,id.vars ="Country")
+#q6.melt[,Benefits:=ifelse(value==1,"Members take the group more seriously",ifelse(value==2,"Outsiders take the group more seriously",ifelse(value==3,"We can access support",ifelse(value==4,"We can open a bank-account",ifelse(value==5,"Other (specify)",NA)))))]
+q6.melt$variable<-factor(q6.melt$variable,levels =c('Members take the group more seriously','Outsiders take the group more seriously','We can access support','We can open a bank-account','Other (specify)',"Respondents"))
+q6.melt$value[q6.melt$value ==-1]<-NA
+B <- q6.melt%>%drop_na()%>%group_by(Country,variable)%>%dcast(variable~Country,fun = sum)
+#rbind(B,c("",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+ rbind(B,c("Respondents",152,143))%>%kable()
+```
+
+# Q86	Does the group use any form of technology? E.g. calculator on phone? an app on a phone to do bookkeeping?	
+
+```{r}
+q6 = df[,grep('Country|Q_86',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Technology:=ifelse(Q_86==1,'Yes',ifelse(Q_86==2,"No",NA))]
+q6$Technology<-factor(q6$Technology,levels =c("Yes","No","respondents"))
+B <- q6[,c(1,3)]%>%drop_na()%>%group_by(Country,Technology)%>%count()%>%dcast(Technology~Country)
+rbind(B,c("respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+#rbind(B,c("",44,95))%>%kable()
+```
+
+# Q87 What forms of technology does the group use?	
+
+```{r}
+q6 = df[,grep('Country|A_87',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+names(q6)<-c("Country","Stand-alone calculator","Calculator on simple phone","Calculator on smart phone","Sending messages on simple phone","Sending messages on smart phone","Recording numbers or balances on simple phone","Recording numbers or balances on smart phone","Camera on simply phone","Camera on smart phone","Other")
+q6.melt <-melt(q6,id.vars="Country")
+#q6.melt[,Value:=ifelse(value==1,"Stand-alone calculator",ifelse(value==2,"Calculator on simple phone",ifelse(value==3,"Calculator on smart phone",ifelse(value==4,"Sending messages on simple phone",ifelse(value==5,"Sending messages on smart phone",ifelse(value==6,"Recording numbers or balances on simple phone",ifelse(value==7,"Recording numbers or balances on smart phone",ifelse(value==8,"Camera on simply phone",ifelse(value==9,"Camera on smart phone",NA)))))))))]
+q6.melt$variable <- factor(q6.melt$variable,levels =c('Stand-alone calculator','Calculator on simple phone','Calculator on smart phone','Sending messages on simple phone',
+'Sending messages on smart phone','Recording numbers or balances on simple phone','Recording numbers or balances on smart phone','Camera on simply phone','Camera on smart phone','Other',"respondents"))
+q6.melt$value[q6.melt$value==-1]<-NA
+B <- q6.melt%>%drop_na()%>%group_by(variable,Country)%>% dcast(variable~Country,fun =sum)
+#rbind(B,c("",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+rbind(B,c("respondents",22,95))%>%kable()
+```
+
+# Q91	What is the gender of the respondent?
+
+```{r}
+q6 = df[,grep('Country|Q_91',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[,Gender:=ifelse(Q_91==1,"Female",ifelse(Q_91==2,"Male",NA))]
+B <- q6[,c(1,3)]%>%drop_na()%>%group_by(Gender,Country)%>%count()%>%dcast(Gender~Country)
+rbind(B,c("Respondents",Respondents=colSums(B[,2:3],na.rm=T)))%>%kable()
+#rbind(B,c("",22,95))%>%kable()
+```
+
+# Q92	Could you estimate the age of the respondent?	
+
+```{r}
+q6 = df[,grep('Country|Q_92',names(df)),with = F]
+q6[q6$Country=="-"]<-NA
+q6[q6$Q_92<10]<-NA
+q6%>%drop_na()%>%ggplot(aes(y=Q_92))+geom_boxplot(fill=colors[1])+labs(title ="Could you estimate the age of the respondent? SEEP-CR-92", "Mali n=154              Uganda n=124",y="Estimated Age of Respondent")+theme1+scale_fill_manual(values=colors)+scale_y_continuous(breaks =seq(0,85,by =5))+facet_wrap(~Country)
+q6[,1:2] %>% drop_na() %>% group_by(Country) %>% count()
+
+```
+

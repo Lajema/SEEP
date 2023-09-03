@@ -1,0 +1,29 @@
+---
+title: "poline"
+author: "John Kamau"
+date: "24/06/2019"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,fig.width = 10,fig.height = 7)
+```
+```{r}
+
+library(readxl)
+library(data.table)
+library(tidyverse)
+library(plotly)
+df<- read_excel("D:/Kamau Lift/SEEP/SEEP Intake_2019_13_06_11_41.xlsx")
+setDT(df)
+polline <- df[df$Srvyr=="pollineseep"]
+polline$Longitude <-as.numeric(polline$Longitude)
+polline$Latitude <-as.numeric(polline$Latitude)
+```
+
+```{r}
+library(leaflet)
+map <- leaflet()%>%addTiles()%>%
+  addMarkers(lng=polline$Longitude,lat=polline$Latitude,popup = polline$GroupName)
+map
+```
+

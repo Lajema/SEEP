@@ -1,0 +1,115 @@
+---
+title: "Untitled"
+author: "Eunice Kamau"
+date: "08/10/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F,message = F,warning = F)
+```
+
+```{r}
+# Variables
+
+```
+```{r}
+#libraries
+library(readxl)
+library(tidyverse)
+library(knitr)
+library(data.table)
+library(formattable)
+library(ggplot2)
+library(janitor)
+library(plotly)
+
+
+```
+```{r}
+#Files
+source('theme.R')
+df <- read_excel("D:/Kamau Lift/SEEP/census/SEEP-Census_2019_26_08_19_28.xlsx")
+
+combined <- read_excel("D:/Kamau Lift/SEEP/combined.xlsx")
+df<-combined[,grep("Country|^ID$|CENSUS",names(combined))]
+setDT(df)
+colors <- c("#118467", "#A9711E", "#6D847A", "#BB8755", "#82ACA0", "#9C7F61",
+            "#D88523", "#83A593", "#E6A168", "#9DD0C0", "#BE9D7C", "#A2C8B9",
+            "#EBCABA", "#A1DBD3")
+
+```
+# Q23	Has the group {0} created or brought about other savings groups?	(Combined)
+
+```{r,fig.width =15,fig.height =7}
+data<-df[,grep("^ID$|Country|Q_23",names(df)),with =F]#[,c(1,2)]
+data[data$Country =="-"]<-NA
+data[data==-1]<-NA
+data$Sum<-rowMeans(data[,3:7],na.rm =T)
+
+data1<-df[,grep("^ID$|Country|Q_11",names(df)),with =F]#[,c(1,2)]
+data1[data1$Country =="-"]<-NA
+data1[data1==-1]<-NA
+#data1 %>% group_by(Q_11) %>% count()
+j<-cbind(data1,data[,c(8)])
+j$Sumer <-rowMeans(j[,3:4],na.rm =T)
+#j<-j %>% drop_na()
+B<-j[,combined:=ifelse(Sumer==2,"No","Yes")][,c(1,2,6)] %>% drop_na() %>% group_by(Country,combined) %>% dcast(combined~Country)
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+#summer %>% ggplot
+
+```
+
+# Q24	How many groups has the group {0} contributed to? (also include groups that no longer exist)	
+
+```{r,fig.width =10,fig.height =10}
+data<-df[,grep("Country|^ID$|Q_24",names(df)),with =F]#[,c(1,2)]
+data[data$Country =="-"]<-NA
+data[data==-1]<-NA
+data$sum<-rowSums(data[,3:7],na.rm = T)
+data1<-df[,grep("Country|^ID$|Q_12",names(df)),with =F]#[,c(1,2)]
+j<-cbind(data[,c(1,2,8)],data1[,3])
+j[is.na(j)]<-0
+j[,combined:=ifelse(sum>Q_12,sum,Q_12)]
+j$combined[j$combined==0]<-NA
+y<-j %>% arrange(combined)
+j$ID<-factor(j$ID,levels =y$ID)
+ug<-j[j$Country=="Uganda"]
+ml<-j[j$Country=="Mali"]
+ug %>% drop_na() %>% ggplot(aes(x =ID,y =combined))+geom_bar(stat ='identity',fill=colors[1])+facet_wrap(~Country) +labs(title="How many groups has the group {0} contributed to? (also include groups that no longer exist)",y ="Groups Contributed")+theme1+scale_fill_manual(values=colors)+theme(axis.text.x = element_blank())+scale_y_continuous(breaks =seq(0,30,2))
+ml%>% drop_na() %>% ggplot(aes(x =ID,y =combined))+geom_bar(stat ='identity',fill=colors[1])+facet_wrap(~Country) +labs(title="How many groups has the group {0} contributed to? (also include groups that no longer exist)",y ="Groups Contributed")+theme1+scale_fill_manual(values=colors)+theme(axis.text.x = element_blank())+scale_y_continuous(breaks =seq(0,30,2))
+j %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# Q25	What is current situation of these groups that group {0} brought or create?	All are still functioning
+
+```{r,fig.width =10,fig.height =5}
+
+# data<-df[,grep("^ID$|Country|A_25",names(df)),with =F]#[,c(1,2)]
+# data[data$Country =="-"]<-NA
+# data[data==-1]<-NA
+# data[data==0]<-NA
+# data$x = apply(data[,3:31], 1, FUN=median,na.rm =T)
+# data[,c(1,2,33)] %>% drop_na() %>% group_by(Country) %>% tally()
+
+
+data<-df[,grep("Country|A_13",names(df)),with =F]#[,c(1,2)]
+data[data$Country =="-"]<-NA
+names(data)<-c("Country","All are still functioning","Most are still functioning","Some are still functioning, some collapsed","Most have collapsed","All have collapsed","Other (specify)")
+data.melt <-melt(data,id.vars ="Country")
+data.melt$value[data.melt$value==-1]<-0
+#data.melt[,value:=ifelse(value==1,"All are still functioning",ifelse(value==2,"Most are still functioning",ifelse(value==3,"Some are still functioning, some collapsed",ifelse(value==4,"Most have collapsed",ifelse(value==5,"All have collapsed",ifelse(value==6,"Other (specify)",NA))))))]
+data.melt$variable <-factor(data.melt$variable,levels =c("All are still functioning","Most are still functioning","Some are still functioning, some collapsed","Most have collapsed",
+"All have collapsed","Other (specify)","Percentage","Respondents"))
+B<-data.melt %>% drop_na() %>% group_by(Country,variable) %>% dcast(variable~Country,fun =sum)
+B[1,]<-c("All are still functioning",25,50)
+B$Mali<-as.numeric(B$Mali)
+B$Uganda<-as.numeric(B$Uganda)
+rbind(B,c("Respondents",colSums(B[,2:3]))) %>% kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```

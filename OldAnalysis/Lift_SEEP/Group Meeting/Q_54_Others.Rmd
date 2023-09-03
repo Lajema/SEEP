@@ -1,0 +1,66 @@
+---
+title: "Q_54_Meeting"
+author: "Kamau Kamau"
+date: "14/10/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F,message =F,warning  =F)
+```
+
+
+```{r}
+library(readxl)
+library(data.table)
+library(dplyr)
+library(tidyr)
+library(knitr,kableExtra)
+library(formattable)
+library(ggplot2)
+source('theme.R')
+colors <- c("#118467", "#A9711E", "#6D847A", "#BB8755", "#82ACA0", "#9C7F61",
+            "#D88523", "#83A593", "#E6A168", "#9DD0C0", "#BE9D7C", "#A2C8B9",
+            "#EBCABA", "#A1DBD3")
+combined <- read_excel("D:/Kamau Lift/SEEP/combined.xlsx")
+setDT(combined)
+M1<-combined[,grep("^ID$|Country|SEEP_GROUPMEETING 1",names(combined)),with =F]
+M2<-combined[,grep("^ID$|Country|SEEP_GROUPMEETING 2",names(combined)),with =F]
+M3<-combined[,grep("^ID$|Country|SEEP_GROUPMEETING 3",names(combined)),with =F]
+# M1 <- read_excel("D:/Kamau Lift/SEEP/Group Meeting/SEEPGroupMeeting1_2019_13_08_13_53_New1.xlsx")
+# M2 <- read_excel("D:/Kamau Lift/SEEP/Group Meeting/SEEPGroupMeeting2_2019_13_08_13_56_new.xlsx")
+# M3 <- read_excel("D:/Kamau Lift/SEEP/Group Meeting/SEEPGroupMeeting_3_2019_13_08_13_58_new.xlsx")
+
+# setDT(M1)
+# setDT(M2)
+# setDT(M3)
+```
+
+# Q54	Which rules were changed?	(Multiple Selection)
+
+
+```{r,fig.height=20,fig.width=20}
+library(janitor)
+x1=M3[,grep("Country|A_54",names(M3)),with =F]
+names(x1)<-c("Country","Savings amount","Share amount","Loan amount","Loan interest","Loan duration","Loan eligibility","Social Fund","Fine","Other (specify)")
+x1<-melt(x1,id.vals ='Country')
+#x1[,value:=ifelse(value==1,"Share amount",ifelse(value==2,"Loan amount",ifelse(value==3,"Loan interest",ifelse(value==4,"Loan duration",ifelse(value==5,"Loan eligibility",ifelse(value==6,"Social Fund",ifelse(value==7,"Fine",ifelse(value==8,"Other (specify)",NA))))))))]
+x1$variable<-factor(x1$variable,levels=c("Savings amount","Share amount","Loan amount","Loan interest","Loan duration","Loan eligibility","Social Fund","Fine","Other (specify)","Respondents","Percentage"))
+B1<-x1 %>% drop_na() %>% group_by(Country,variable) %>% dcast(variable~Country,fun =sum)
+rbind(B1,c("Respondents",152,136)) %>% kable()
+per <- B1%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1)))  %>% kable()
+#x1 %>% group_by(Country) %>% count()
+```
+
+# Others
+
+```{r}
+x1=M3[,grep("Country| 3_S_54_9",names(M3)),with =F]
+names(x1)<-c("Country","Others")
+x1[,Others:=tolower(Others)]
+y = x1 %>% drop_na() %>% group_by(Others,Country) %>% count() %>% dcast(Others~Country,fun =sum) 
+rbind(y,c("Respondents",colSums(y[,2:3])))%>% kable()
+```
+

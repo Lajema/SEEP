@@ -1,0 +1,97 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  word_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,fig.width = 10,fig.height = 7)
+options(scipen=999)
+```
+
+# Property at the begining of the Cycle Vs Property Now
+
+ Most groups reported the property for both Now and at the  begining of the Cycle as Zero. This affects the Median and Mean values such that they are Skewed towards Zero.
+ The Diff Variable is a new variable that comes from the difference between the property now and at the begining of the Cycle. It simply measures the growth of the groups within the period of research.
+ The analysis have also ignored those that answered "I dont Know" or "I dont want to answer" because they are few and do not contribute more information.
+ 
+```{r fig.width =7}
+library(readxl)
+library(tidyverse)
+library(reshape2)
+source('theme.R')
+colors <- c("#118467", "#A9711E", "#6D847A", "#BB8755", "#82ACA0", "#9C7F61",
+            "#D88523", "#83A593", "#E6A168", "#9DD0C0", "#BE9D7C", "#A2C8B9",
+            "#EBCABA", "#A1DBD3")
+chair <- read_excel("D:/Kamau Lift/SEEP/New Query/chair.xlsx")
+seep <- read_excel("D:/Kamau Lift/SEEP/New Query/seep.xlsx")
+x1<- chair %>% dplyr::select(ID,Q_65) %>% mutate(Q_65 = ifelse(Q_65==1,"Yes",ifelse(Q_65==2,"No",ifelse(Q_65==3,"I don’t know","I don’t want to answer")))) %>% filter(Q_65=="Yes"| Q_65 == "No")
+names(x1)<-c("ID","Q_65")
+x2 <- seep %>% dplyr::select(ID,Property_at_start_of_cycle,Property_now) %>% mutate(Property_at_start_of_cycle =as.numeric(Property_at_start_of_cycle),Property_now = as.numeric(Property_now))
+x <- merge(x1,x2,by = 'ID',all=TRUE)
+x$Q_65<-factor(x$Q_65)
+x$diff <- x$Property_now-x$Property_at_start_of_cycle
+melt(x,id.vars =c("ID",'Q_65')) %>% drop_na() %>% ggplot(aes(x =Q_65,y = value))+geom_boxplot(fill=colors[1])+geom_jitter(alpha =0.2)+facet_grid(~variable)+labs(title = "Joint economic activity vs Property")+theme1+scale_fill_manual(values =colors)#+coord_flip()
+```
+
+ 
+ # with All zeros removed
+ 
+ The graphs below have the Zeros removed. This helps see the data better, from a visual perspective the median value for those that answered Yes have higher median value for property now that those that answerd No, the difference is small but is better seen for the growth variable (diff). The median for the groups that reported Joint economic activities is higher for the growth variable, this means that on average, groups with joint economic activity grew more that those without.
+ 
+```{r}
+x[x==0]<-NA
+ melt(x,id.vars =c("ID",'Q_65')) %>% drop_na() %>% ggplot(aes(x =Q_65,y = value))+geom_boxplot(fill=colors[1])+geom_jitter(alpha =0.2)+facet_grid(~variable)+labs(title = "Joint economic activity vs Property")+theme1+scale_fill_manual(values = colors)
+Ts <- melt(x,id.vars =c("ID",'Q_65')) %>% drop_na() %>% ggplot(aes(x =Q_65,y = value))+geom_boxplot(fill=colors[1])+facet_grid(~variable)+labs(title = "Joint economic activity vs Property")+theme1+scale_fill_manual(values = colors)
+library(plotly)
+ggplotly(Ts)
+```
+
+# Anova Test
+
+* Ho: the were no differences between mean
+
+* H1: there were differences between the mean
+
+I used an Anova test to test if the differences that has been observed in the box plots above is statistically significant. The Anova test tests whether the differences in means between groups is significant. The anova test showed that we should reject the Ho: the differences between the groups were significant statistically at a confidence level of 95%
+
+```{r}
+#head(x)
+x$diff <- x$Property_now-x$Property_at_start_of_cycle
+l <- aov(x$diff~x$Q_65)
+l %>% broom::tidy() %>% knitr::kable()
+```
+
+# The Type of Business
+
+To answer whether the type of business has an influence on the reported property, I fit a linear regression model to see which type of business would be a predictor for the growth variable.
+the model:
+
+$Propertygrowth = \alpha + Jointproduction + BulkPurchases+BulkSelling+GroupBusinesses+Other$
+
+
+Two variables have a relationship to property: 
+
+1. Joint Production
+
+2. Group Business
+   
+```{r}
+h<- seep[,grep("^ID$|Property_at_start_of_cycle|Property_now",names(seep))]
+h1 <- chair[,grep("^ID$|Q_65|A_66",names(chair))]
+names(h1)<- c("ID","Q_65","Joint production","Bulk purchases of inputs","Bulk selling/Joint marketing of output","Group business",
+"Other (specify)")
+H <- merge(h,h1,by ="ID",all =TRUE)
+H<- H %>% mutate(Q_65 =ifelse(Q_65==1,"Yes",ifelse(Q_65==2,"No",ifelse(Q_65==3,"I don’t know","I don’t want to answer"))))
+H$Property_at_start_of_cycle=as.numeric(H$Property_at_start_of_cycle)
+H$Property_now=as.numeric(H$Property_now)
+H$diff <- H$Property_now-H$Property_at_start_of_cycle
+g=H[,5:10]
+g[g==-1]=NA
+g[,1:5]=lapply(g[,1:5],factor)
+summary(lm(diff~.,g)) %>% broom::tidy() %>% knitr::kable()
+```
+
+

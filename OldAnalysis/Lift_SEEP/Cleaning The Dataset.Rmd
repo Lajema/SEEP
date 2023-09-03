@@ -1,0 +1,32 @@
+---
+title: "Correct data File"
+author: "John Kamau"
+date: "10/09/2019"
+output: html_document
+---
+
+```{r}
+library(readxl)
+df1 <- read_excel("D:/Kamau Lift/SEEP/SGELI_LT-Outcomes_DATA.MASTER.USD.20190905-DP.xlsx")
+df <-read_excel("D:/Kamau Lift/SEEP/Data_Corrected.xlsx")
+ug<-0.0002708606
+ml<-0.0017068220
+library(data.table)
+setDT(df)
+```
+
+```{r}
+c("Writeoffs_this_cycle","Property_at_start_of_cycle")
+df[,Writeoffs_this_cycle:=ifelse(Country=="Mali",Writeoffs_this_cycle*ml,Writeoffs_this_cycle*ug)]
+df[,Property_at_start_of_cycle:=ifelse(Country=="Mali",Property_at_start_of_cycle*ml,Property_at_start_of_cycle*ug)]
+view(df[,c("Country","Property_at_start_of_cycle")])
+
+```
+
+```{r}
+library(xlsx)
+write.csv(df, "D:/Kamau Lift/SEEP/df.csv")
+```
+
+
+

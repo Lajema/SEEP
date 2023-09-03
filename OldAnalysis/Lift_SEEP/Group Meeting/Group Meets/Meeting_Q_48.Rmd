@@ -1,0 +1,67 @@
+---
+title: "Q_48"
+author: "John Kamau"
+date: "28/09/2019"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,fig.width = 10,fig.height = 7)
+options(scipen=999)
+```
+```{r}
+library(readxl)
+library(data.table)
+library(dplyr)
+library(tidyr)
+library(knitr,kableExtra)
+library(formattable)
+library(ggplot2)
+setwd('D:\\Kamau Lift\\SEEP\\Group Meeting')
+source('themess.R')
+colors <- c("#118467", "#A9711E", "#6D847A", "#BB8755", "#82ACA0", "#9C7F61",
+            "#D88523", "#83A593", "#E6A168", "#9DD0C0", "#BE9D7C", "#A2C8B9",
+            "#EBCABA", "#A1DBD3")
+combined <- read_excel("D:/Kamau Lift/SEEP/combined.xlsx")
+setDT(combined)
+M1<-combined[,grep("^ID$|Country|SEEP_GROUPMEETING 1",names(combined)),with =F]
+M2<-combined[,grep("^ID$|Country|SEEP_GROUPMEETING 2",names(combined)),with =F]
+M3<-combined[,grep("^ID$|Country|SEEP_GROUPMEETING 3",names(combined)),with =F]
+# M1 <- read_excel("D:/Kamau Lift/SEEP/Group Meeting/SEEPGroupMeeting1_2019_13_08_13_53_New1.xlsx")
+# M2 <- read_excel("D:/Kamau Lift/SEEP/Group Meeting/SEEPGroupMeeting2_2019_13_08_13_56_new.xlsx")
+# M3 <- read_excel("D:/Kamau Lift/SEEP/Group Meeting/SEEPGroupMeeting_3_2019_13_08_13_58_new.xlsx")
+
+# setDT(M1)
+# setDT(M2)
+# setDT(M3)
+```
+
+# Q48	How many members attended in total?	 (Multiple Selection)
+
+```{r,fig.width=20,fig.height=15}
+x =M1[,grep("Country|T_48",names(M1)),with =F]#[,c(1:2)]
+x$G <-"G1"
+x1=M2[,grep("Country|T_46",names(M2)),with =F]#[,c(1:2)]
+x1$G <-"G2"
+x2 =M3[,grep("Country|T_46",names(M3)),with =F]#[,c(1:2)]
+x2$G <-"G3"
+B <-rbind(x,x1,use.names=FALSE)
+B<-rbind(B,x2,use.names=FALSE)
+B[B$Country=="-"]<-NA
+names(B)<-c("Country","number attended personally",	"represented by someone else (person stayed)",	"Rep. by someone with the savings (didnt stay)",	"sent their money through other group-member",	"had announced they would be absent",	"had a known emergency and were absent",	"absent for unknown reason and not represented","G")
+B.melt<-melt(B,id.vars =c("Country","G"))
+B.melt$variable <-factor(B.melt$variable,levels =c("number attended personallly",	"represented by someone else (person stayed)",	"Represented by someone with the savings (person did not stay)",	"sent their money through other group-member",	"had announced they would be absent",	"had a known emergency and were absent",	"absent for unknown reason and not represented"))
+UG<-B.melt[B.melt$Country=="Uganda"]
+ML<-B.melt[B.melt$Country=="Mali"]
+#UG %>% drop_na() %>% ggplot(aes(x=variable,y =value))+geom_boxplot(fill =colors[1])+labs(title ="How many members attended in total? SEEP-GM-48 \n Uganda",x ="Absent Members",y ="Members")+theme1+scale_fill_manual(values=colors)+facet_wrap(~G)+coord_flip()+theme(axis.title = element_text(size = 20))+scale_y_continuous(breaks =seq(0,40,5))
+print("Mali")
+#ML%>% drop_na() %>% ggplot(aes(x=variable,y =value))+geom_boxplot(fill =colors[1])+labs(title ="How many members attended in total? SEEP-GM-48 \n Mali",x ="Absent Members",y ="Members")+theme1+scale_fill_manual(values=colors)+facet_wrap(~G)+coord_flip()+theme(axis.title = element_text(size = 20))+scale_y_continuous(breaks =seq(0,40,5))
+# B %>% drop_na() %>% group_by(Country,G) %>% dcast(Country~G) %>% kable()
+```
+```{r}
+library(plotly)
+x<- B.melt %>% drop_na() %>% ggplot(aes(x=G,y =value,fill =variable))+geom_bar(stat ='identity',position ="fill")+labs(title ="How many members attended in total? SEEP-GM-48",y ="Members" )+facet_wrap(~Country)+theme1+scale_fill_manual(values =colors)
+x
+```

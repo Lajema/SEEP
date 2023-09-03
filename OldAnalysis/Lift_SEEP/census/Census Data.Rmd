@@ -1,0 +1,430 @@
+---
+title: "Census Analysis"
+author: "John Kamau"
+date: "27/08/2019"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+Company: Low Income Transformation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F,message = F,warning = F)
+```
+
+```{r}
+# Variables
+
+```
+```{r}
+#libraries
+library(readxl)
+library(tidyverse)
+library(knitr)
+library(data.table)
+library(formattable)
+library(ggplot2)
+library(janitor)
+library(plotly)
+
+
+```
+```{r}
+#Files
+source('theme.R')
+df <- read_excel("D:/Kamau Lift/SEEP/census/SEEP-Census_2019_26_08_19_28.xlsx")
+
+combined <- read_excel("D:/Kamau Lift/SEEP/combined.xlsx")
+df<-combined[,grep("Country|^ID$|CENSUS",names(combined))]
+setDT(df)
+colors <- c("#118467", "#A9711E", "#6D847A", "#BB8755", "#82ACA0", "#9C7F61",
+            "#D88523", "#83A593", "#E6A168", "#9DD0C0", "#BE9D7C", "#A2C8B9",
+            "#EBCABA", "#A1DBD3")
+
+```
+
+# Introduction
+
+Instructions for the Survey
+-----
+
+You have been given a list of VSLA groups with “sample instruction” (reference number of group). For instance: COMVIS-A-Replacement3. In addition to interviewing the sample groups, you will have to conduct a census of all of the VSLAs in the village, including the replicated groups. Both of these tasks will require repeated visits to the village, and therefore you must establish good relations with the village authorities. Contact with authorities When you come to the village, you should introduce yourself to the chief, or elders, depending on the social structure and expectations. Explain the purpose of your visit: You are from L-IFT, a company that does research on Savings Groups in several countries, and you have been asked to carry out a study in Mali and Uganda. You want to learn about the VSLAs in the village so that other countries can learn from the experience to make it better. Therefore you will need everyone to be very frank. You are not looking for “good news” or “bad news”. You just want to learn what has happened. Some of the interviews will be in small groups or with individuals so that people will not be embarrassed to talk about any problems they may have. Others will be before the entire village.
+It will take time to identify all the groups in the village. Since your objective is to identify all the groups in each village, do not limit to who you ask. Continue to ask everybody, “Do you know of any groups of villagers who meet regularly to save money?” You should ask that question to every group you visit and also during casual encounters in shops and restaurants, churches and mosques, and when simply relaxing, or walking around the village. 
+It is important to identify all the groups in the village, and there is no list of them, except for the one that you create
+Members to be involved in developing the census:  
+
+1.       Members from sampled groups  
+
+2.       Local authorities  
+
+3.       Village agents 
+
+4.       Community members 
+
+5.       Chiefs & elders  
+
+6.       Casual accountants in shops 
+
+7.       Churches & mosques    
+
+When to carry out census: 
+
+1.       During meeting  
+
+2.       Before the meeting 
+
+3.       After the meeting 
+
+4.       Hang around the village of the group and talk to anybody you can find
+
+
+# Questions For the Census
+
+# Q5	What is the status of VSLA group {0} with sample instruction {1} ?
+```{r}
+X =names(df)
+X =data.table(X)
+X[,clean:=gsub("SEEP_CENSUS_","",X)]
+names(df)<-X$clean
+```
+
+
+```{r}
+data<-df[,grep("Country|Q_5",names(df)),with =F][,c(1,2)]
+
+data[data$Country =="-"]<-NA
+data[,value:=ifelse(Q_5==1,"Group still exists with same name",ifelse(Q_5==2,"Group still exists but new name",ifelse(Q_5==3,"Group collapsed",ifelse(Q_5==4,"Nobody has ever heard of this group",ifelse(Q_5==5,"Other (specify)",NA)))))]
+data$value <-factor(data$value,levels =c("Group still exists with same name","Group still exists but new name","Group collapsed","Nobody has ever heard of this group","Other (specify)","Percentage","Respondents"))
+B<-data %>% drop_na() %>% group_by(Country,value) %>% dcast(value~Country)
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+
+```
+
+```{r}
+data<-df[,grep("Country|Q_5",names(df)),with =F]
+melt(data,id.vars ='Country') %>% drop_na() %>% subset(variable=='Q_5_S') %>% dcast(value~Country) %>% kable()
+
+```
+
+
+# Q8	Why did the group change its name?
+
+```{r}
+data<-df[,grep("Country|Q_8",names(df)),with =F][,c(1,2)]
+data[data$Country =="-"]<-NA
+data[,value:=ifelse(Q_8==1,"It split into two group (fissure)",ifelse(Q_8==2,"So many members changed that it needed a new name",ifelse(Q_8==3,"Just because they liked a new name",ifelse(Q_8==4,"Other (specify)",NA))))]
+data$value <-factor(data$value,levels =c("It split into two group (fissure)","So many members changed that it needed a new name","Just because they liked a new name","Other (specify)","Percentage","Respondents"))
+B<-data %>% drop_na() %>% group_by(Country,value) %>% dcast(value~Country)
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q10	What was the reason for the group-collapse?
+
+There was no specified reason why the groups collapsed under this question.
+
+```{r}
+data<-df[,grep("Country|A_10",names(df)),with =F]#[,c(1,2)]
+data[data$Country =="-"]<-NA
+names(data)<-c("Country","Money missing","Loans not repaid","Religious reasons","Group had fulfilled its purpose and members decided to wind it up","Cash-box stolen by outsider","Cash-box stolen by group-member/committee member","Mismanagement committee","Conflicts/fights","Family opposition","Members got old or moved away","Other (specify)")
+data.melt <-melt(data,id.vars ="Country")
+data.melt$value[data.melt$value==-1]<-NA
+#data.melt[,value:=ifelse(value==1,"Money missing",ifelse(value==2,"Money missing",ifelse(value==3,"Religious reasons",ifelse(value==4,"Group had fulfilled its purpose and members decided to wind it up",ifelse(value==5,"Cash-box stolen by outsider",ifelse(value==6,"Cash-box stolen by group-member/committee member",ifelse(value==7,"Mismanagement committee",ifelse(value==10,"Family opposition",ifelse(value==11,"Members got old or moved away",ifelse(value==12,"Other (specify)",ifelse(value==9,"Conflicts/fights",NA)))))))))))]
+data.melt$variable <-factor(data.melt$variable,levels =c("Money missing","Loans not repaid","Religious reasons","Group had fulfilled its purpose and members decided to wind it up","Cash-box stolen by outsider","Cash-box stolen by group-member/committee member","Mismanagement committee","Conflicts/fights","Family opposition","Members got old or moved away","Other (specify)","Percentage","Respondents"))
+B<-data.melt %>% drop_na() %>% group_by(Country,variable) %>% dcast(variable~Country,fun =sum)
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+```{r}
+#data<-df[,grep("Country|A_10",names(df)),with =F]
+```
+
+
+<!-- # Q11	Has the group created or brought about other savings groups?	 -->
+
+<!-- ```{r} -->
+<!-- data<-df[,grep("Country|Q_11",names(df)),with =F]#[,c(1,2)] -->
+<!-- data[data$Country =="-"]<-NA -->
+<!-- data[,value:=ifelse(Q_11==1,"Yes",ifelse(Q_11==2,"No",NA))] -->
+<!-- data$value <-factor(data$value,levels =c("Yes","No","Percentage","Respondents")) -->
+<!-- B<-data %>% drop_na() %>% group_by(Country,value) %>% dcast(value~Country) -->
+<!-- rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable() -->
+<!-- per <- B%>%  adorn_percentages('col') -->
+<!-- per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3) -->
+<!-- rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable() -->
+<!-- ``` -->
+
+<!-- # Q12	How many groups has the group contributed to? (also include groups that no longer exist)	I don't know -->
+
+<!-- ```{r,fig.height =10,fig.width =9} -->
+<!-- data<-df[,grep("Country|^ID$|Q_12",names(df)),with =F]#[,c(1,2,5)] -->
+<!-- data[data$Country =="-"]<-NA -->
+<!-- data[,value:=ifelse(Q_12<0,0,Q_12)] -->
+<!-- data$ID =c(1:dim(data)[1]) -->
+<!-- X =data %>% arrange(value) -->
+<!-- data$ID <-factor(data$ID,levels = X$ID) -->
+<!-- data[data$value==0]<-NA -->
+<!-- ml<-data[data$Country=="Mali"] -->
+<!-- ug<-data[data$Country=="Uganda"] -->
+<!-- ml %>% drop_na() %>% ggplot(aes(y =value,x=ID))+geom_bar(fill =colors[1],stat="identity")+theme1+scale_fill_manual(values= colors)+labs(title ="How many groups has the group contributed to? \n (also include groups that no longer exist)\n SEEP-Census-12\n Mali",y ="Groups",x ="")+scale_y_continuous(breaks =seq(0,20,2))+facet_wrap(~Country)+facet_grid(rows=vars(Country))+theme(axis.text.x = element_blank())+scale_y_continuous(breaks =seq(1,20,1)) -->
+<!-- ug %>% drop_na() %>% ggplot(aes(y =value,x=ID))+geom_bar(fill =colors[1],stat="identity")+theme1+scale_fill_manual(values= colors)+labs(title ="How many groups has the group contributed to? \n (also include groups that no longer exist)\n SEEP-Census-12\n Uganda",y ="Groups",x ="")+scale_y_continuous(breaks =seq(0,20,2))+facet_wrap(~Country)+facet_grid(rows=vars(Country))+theme(axis.text.x = element_blank())+scale_y_continuous(breaks =seq(1,20,1)) -->
+<!-- table(data$Country) -->
+<!-- ``` -->
+
+<!-- # Q13	What is current situation of these groups? -->
+
+<!-- ```{r} -->
+<!-- data<-df[,grep("Country|A_13",names(df)),with =F]#[,c(1,2)] -->
+<!-- data[data$Country =="-"]<-NA -->
+<!-- names(data)<-c("Country","All are still functioning","Most are still functioning","Some are still functioning, some collapsed","Most have collapsed","All have collapsed","Other (specify)") -->
+<!-- data.melt <-melt(data,id.vars ="Country") -->
+<!-- data.melt$value[data.melt$value==-1]<-0 -->
+<!-- #data.melt[,value:=ifelse(value==1,"All are still functioning",ifelse(value==2,"Most are still functioning",ifelse(value==3,"Some are still functioning, some collapsed",ifelse(value==4,"Most have collapsed",ifelse(value==5,"All have collapsed",ifelse(value==6,"Other (specify)",NA))))))] -->
+<!-- data.melt$variable <-factor(data.melt$variable,levels =c("All are still functioning","Most are still functioning","Some are still functioning, some collapsed","Most have collapsed", -->
+<!-- "All have collapsed","Other (specify)","Percentage","Respondents")) -->
+<!-- B<-data.melt %>% drop_na() %>% group_by(Country,variable) %>% dcast(variable~Country,fun =sum) -->
+<!-- rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable() -->
+<!-- per <- B%>%  adorn_percentages('col') -->
+<!-- per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3) -->
+<!-- rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable() -->
+<!-- ``` -->
+
+# 14	Which other groups from your sample were created in this village/ villages about which you are reporting
+
+```{r}
+data<-df[,grep("Country|T_14",names(df)),with =F]
+data.melt <-melt(data,id.vars ="Country")
+data.melt$value[data.melt$value==-1]<-NA
+data.melt[,value:=tolower(value)]
+data.melt[,value:=gsub("^0$|^a$|^1$|^b$|^o$|^hh$",NA,value)]
+data.melt[,value:=gsub("jiguisseme|jigiseme",'jigisèmè',value)]
+data.melt[,value:=gsub("bakuseka majja traders|bakusekamajja|bakusekemaja",'bakuseka maja',value)]
+data.melt[,value:=gsub("balijjababone",'balijja babone',value)]
+data.melt[,value:=gsub("benkadi1|benkadi (samedine )|benkadi2",'bankadi',value)]
+data.melt[,value:=gsub("byegero",'byogero',value)]
+data.melt[,value:=gsub("gemakumwino",'gemwkumwinyo',value)]
+x = data.melt %>% drop_na() %>% group_by(value,Country)  %>% dcast(value~Country)
+h =colSums(x[,2:3])
+rbind(x,c("Total Groups",h)) %>% kable()
+```
+
+
+
+
+
+# Q17	What is the status of VSLA group {0} ?
+
+```{r,fig.width =15,fig.height =7}
+data<-df[,grep("Country|Q_17",names(df)),with =F]#[,c(1,2)]
+data[data$Country =="-"]<-NA
+data <-data[,c(1,2,4,6,8,10)]
+data.melt<-melt(data,id.vars= "Country")
+data.melt[,Q_17:=value]
+data.melt[,variable:=substr(variable,0,7)]
+data.melt[,Value:=ifelse(Q_17 ==1,"Group still exists with same name",ifelse(Q_17==2,"Group still exists but new name",ifelse(Q_17==3,"Group collapsed",ifelse(Q_17==4,"Nobody has ever heard of this group",ifelse(Q_17==5,"Other (specify)",NA)))))]
+data.melt$Value <-factor(data.melt$Value,levels =c("Group still exists with same name","Group still exists but new name","Group collapsed","Nobody has ever heard of this group","Other (specify)","Percentage","Respondents"))
+data.melt %>% drop_na() %>% ggplot(aes(x=variable,fill =Value))+geom_bar(position ="fill")+theme2+scale_fill_manual(values =colors)+coord_flip()+ theme(legend.title = element_blank())+labs(title ="What is the status of VSLA group {0} ? SEEP-Census-17")+facet_wrap(~Country)
+D <-data[,c(1,2)]
+D[D$`Group 1_Q_17`==-1]<-NA
+D %>% drop_na() %>% group_by(Country) %>% count() %>% kable()
+```
+
+# Q23	Has the group {0} created or brought about other savings groups?	(Combined)
+
+```{r,fig.width =15,fig.height =7}
+data<-df[,grep("^ID$|Country|Q_23",names(df)),with =F]#[,c(1,2)]
+data[data$Country =="-"]<-NA
+data[data==-1]<-NA
+data$Sum<-rowMeans(data[,3:7],na.rm =T)
+
+data1<-df[,grep("^ID$|Country|Q_11",names(df)),with =F]#[,c(1,2)]
+data1[data1$Country =="-"]<-NA
+data1[data1==-1]<-NA
+#data1 %>% group_by(Q_11) %>% count()
+j<-cbind(data1,data[,c(8)])
+j$Sumer <-rowMeans(j[,3:4],na.rm =T)
+#j<-j %>% drop_na()
+B<-j[,combined:=ifelse(Sumer==2,"No","Yes")][,c(1,2,6)] %>% drop_na() %>% group_by(Country,combined) %>% dcast(combined~Country)
+rbind(B,c("Respondents",colSums(B[,c(2:3)],na.rm = T))) %>% kable()
+per <- B%>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+#summer %>% ggplot
+
+```
+
+# Q24	How many groups has the group {0} contributed to? (also include groups that no longer exist)	
+
+```{r,fig.width =10,fig.height =10}
+data<-df[,grep("Country|^ID$|Q_24",names(df)),with =F]#[,c(1,2)]
+data[data$Country =="-"]<-NA
+data[data==-1]<-NA
+data$sum<-rowSums(data[,3:7],na.rm = T)
+data1<-df[,grep("Country|^ID$|Q_12",names(df)),with =F]#[,c(1,2)]
+j<-cbind(data[,c(1,2,8)],data1[,3])
+j[is.na(j)]<-0
+j[,combined:=ifelse(sum>Q_12,sum,Q_12)]
+j$combined[j$combined==0]<-NA
+y<-j %>% arrange(combined)
+j$ID<-factor(j$ID,levels =y$ID)
+ug<-j[j$Country=="Uganda"]
+ml<-j[j$Country=="Mali"]
+ug %>% drop_na() %>% ggplot(aes(x =ID,y =combined))+geom_bar(stat ='identity',fill=colors[1])+facet_wrap(~Country) +labs(title="How many groups has the group {0} contributed to? (also include groups that no longer exist)",y ="Groups Contributed")+theme1+scale_fill_manual(values=colors)+theme(axis.text.x = element_blank())+scale_y_continuous(breaks =seq(0,30,2))
+ml%>% drop_na() %>% ggplot(aes(x =ID,y =combined))+geom_bar(stat ='identity',fill=colors[1])+facet_wrap(~Country) +labs(title="How many groups has the group {0} contributed to? (also include groups that no longer exist)",y ="Groups Contributed")+theme1+scale_fill_manual(values=colors)+theme(axis.text.x = element_blank())+scale_y_continuous(breaks =seq(0,30,2))
+j %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# Q25	What is current situation of these groups that group {0} brought or create?	All are still functioning
+
+```{r,fig.width =10,fig.height =5}
+
+# data<-df[,grep("^ID$|Country|A_25",names(df)),with =F]#[,c(1,2)]
+# data[data$Country =="-"]<-NA
+# data[data==-1]<-NA
+# data[data==0]<-NA
+# data$x = apply(data[,3:31], 1, FUN=median,na.rm =T)
+# data[,c(1,2,33)] %>% drop_na() %>% group_by(Country) %>% tally()
+
+
+data<-df[,grep("Country|A_13",names(df)),with =F]#[,c(1,2)]
+data[data$Country =="-"]<-NA
+names(data)<-c("Country","All are still functioning","Most are still functioning","Some are still functioning, some collapsed","Most have collapsed","All have collapsed","Other (specify)")
+data.melt <-melt(data,id.vars ="Country")
+data.melt$value[data.melt$value==-1]<-0
+#data.melt[,value:=ifelse(value==1,"All are still functioning",ifelse(value==2,"Most are still functioning",ifelse(value==3,"Some are still functioning, some collapsed",ifelse(value==4,"Most have collapsed",ifelse(value==5,"All have collapsed",ifelse(value==6,"Other (specify)",NA))))))]
+data.melt$variable <-factor(data.melt$variable,levels =c("All are still functioning","Most are still functioning","Some are still functioning, some collapsed","Most have collapsed",
+"All have collapsed","Other (specify)","Percentage","Respondents"))
+B<-data.melt %>% drop_na() %>% group_by(Country,variable) %>% dcast(variable~Country,fun =sum)
+B[1,]<-c("All are still functioning",25,50)
+B$Mali<-as.numeric(B$Mali)
+B$Uganda<-as.numeric(B$Uganda)
+rbind(B,c("Respondents",colSums(B[,2:3]))) %>% kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q27	How many other groups could you find in the village?	
+
+```{r,fig.height =6}
+data<-df[,grep("Country|ID|Q_27",names(df)),with =F][,c(1,2,5)]
+data[data$Country =="-"]<-NA
+data[data$Q_27<0]<-NA
+data$ID<-c(1:308)
+X<-data %>% arrange(Q_27)
+data$ID<-factor(data$ID,levels =unique(X$ID))
+ml<-data[data$Country=="Mali"]
+ug<-data[data$Country=="Uganda"]
+ml %>% drop_na() %>% ggplot(aes(x =ID,y =Q_27))+geom_bar(stat="identity",fill =colors[2])+theme1+scale_fill_manual(values=colors)+labs(title ="How many other groups could you find in the village? \n SEEP-Census-27\n Mali",y ="Other groups")+ scale_y_continuous(breaks =seq(0,17,1))+facet_wrap(~Country)+facet_grid(rows =vars(Country))+theme(axis.text.x = element_blank())
+ug %>% drop_na() %>% ggplot(aes(x =ID,y =Q_27))+geom_bar(stat="identity",fill =colors[2])+theme1+scale_fill_manual(values=colors)+labs(title ="How many other groups could you find in the village? \n SEEP-Census-27\n Uganda",y ="Other groups")+ scale_y_continuous(breaks =seq(0,17,1))+facet_wrap(~Country)+facet_grid(rows =vars(Country))+theme(axis.text.x = element_blank())
+X %>% drop_na() %>% group_by(Country) %>% count()
+```
+
+# Q29	FUNCTION: How does group {0} operate?	
+
+Iteration Questions
+-----
+
+The Size of the point on the graphs represent the number of respondents in the sample.
+The table that follows shows the full names of the levels within the graph
+Finally the last tables shows the number of respondents for each iteration.
+
+
+```{r,fig.width =10,fig.height  =10}
+data<-df[,grep("Country|Q_29",names(df)),with =F]
+data[data$Country =="-"]<-NA
+data.melt<-melt(data,id.vars ="Country")
+data.melt[,Value:=ifelse(value==1,"(DISTRIBUTING ASCA)",ifelse(value==2,"(NON DISTRIBUTING ASCA)",ifelse(value==3,"(ROSCA)",ifelse(value==4,"dont collect savings",ifelse(value==5,"I don’t know",ifelse(value==6,"I can't find the information",ifelse(value==7,"Other (specify)",NA)))))))]
+data.melt$Value <-factor(data.melt$Value,levels =c("(DISTRIBUTING ASCA)","(NON DISTRIBUTING ASCA)","(ROSCA)","dont collect savings","I don’t know","I can't find the information","Other (specify)","Respondents_Mali","Respondents_Uganda","Percentage","Respondents"))
+B<-data.melt %>% drop_na() %>% group_by(Country,Value) %>% dcast(Value~Country)
+rbind(B,c("Respondents",colSums(B[,2:3]))) %>% kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+#  Q30	ORIGIN How did group {0} come to exist?	
+
+
+```{r,fig.height =10,fig.width =10}
+data<-df[,grep("Country|Q_30",names(df)),with =F]#[,c(1:5)]
+data[data$Country =="-"]<-NA
+data.melt<-melt(data,id.vars ="Country")
+data.melt[,Value:=ifelse(value==1,"Group from sample project (but outside sample)",ifelse(value==2,"Group formed by other project group",ifelse(value==3,"Group replicated from sample project group",ifelse(value==4,"Group unrelated to any project, pre-existing",ifelse(value==5,"Group unrelated to any project, but started later than project",ifelse(value==6,"Other (specify)",NA))))))]
+data.melt$Value <-factor(data.melt$Value,levels =c("Group from sample project (but outside sample)","Group formed by other project group","Group replicated from sample project group","Group replicated from other project’s group","Group unrelated to any project, pre-existing","Group unrelated to any project, but started later than project","Other (specify)","Respondents","Percentage"))
+#data.melt %>% drop_na() %>% group_by(Country,Value,variable) %>% count() %>% dcast(Value~variable) %>% kable()
+B<- data.melt %>% drop_na() %>% group_by(Country,Value) %>% dcast(Value~Country)
+rbind(B,c("Respondents",colSums(B[,2:3]))) %>% kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q31	Did group {0} have any relation to any of the sampled groups?	
+
+
+```{r,fig.height =10,fig.width =10}
+data<-df[,grep("Country|Q_31",names(df)),with =F]#[,c(1:5)]
+data[data$Country =="-"]<-NA
+data.melt<-melt(data,id.vars ="Country")
+data.melt[,Value:=ifelse(value==1,"The group is unrelated to any of these groups",ifelse(value==2,"The group just borrowed a few ideas from (one of) ",ifelse(value==3,"The group heard and learned about the methodology of this group and then set up themselves ",ifelse(value==4,"The group was initiated or trained by a member of this group",ifelse(value==5,"The group was started by some members who left this group",ifelse(value==6,"The group was a split off of this group",ifelse(value==7,"The group was formed by the same trainer as this group",ifelse(value==8,"Other (specify)",NA))))))))]
+
+data.melt$Value <-factor(data.melt$Value,levels =c("The group is unrelated to any of these groups","The group just borrowed a few ideas from (one of) these groups, but mostly the group was just formed using known methodology","The group heard and learned about the methodology of this group and then set up themselves copying most or part","The group was initiated or trained by a member of this group","The group was started by some members who left this group","The group was a split off of this group","The group was formed by the same trainer as this group","Other (specify)","Respondents","Percentage"))
+B<-data.melt %>% drop_na() %>% group_by(Country,Value) %>% dcast(Value~Country)
+rbind(B,c("Respondents",colSums(B[,2:3]))) %>% kable()
+per <- B %>%  adorn_percentages('col')
+per[c(1:length(per$Mali)),2:3] <-per[c(1:length(per$Mali)),2:3] %>% signif(digits=3)
+rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable()
+```
+
+# Q36	Number of members of group {0}
+
+The Iterations were aggregated via a median value, rounded off to remove decimal group members.
+	
+
+```{r,fig.height =10,fig.width = 10}
+library(matrixStats)
+data<-df[,grep("Country|T_36|^ID$",names(df)),with =F]#[,c(1:5)]
+data[data$Country =="-"]<-NA
+data[data==-1]<-NA
+data.melt<-melt(data,id.vars =c("Country","ID"))
+data.melt[,kamau:=gsub("I_[1-9]{1,2}_T_[1-9]{1,2}_","",variable)]
+data.melt[,Value:=ifelse(kamau==1,"Female",ifelse(kamau==2,"Male",NA))]
+#data.melt[,gender:=ifelse(Value==1,paste(variable,"Female",sep="_"),ifelse(Value==2,paste(variable,"Male",sep ="_"),NA))]
+#data.melt[,Value:=ifelse(value<0,NA,value)]
+X  =data.melt %>% drop_na()%>% group_by(ID,Country,Value) %>% summarise(Median =median(value,na.rm = T))
+g<-X %>% group_by(ID) %>% summarise(J=sum(Median)) %>% arrange(J)
+X$ID<-factor(X$ID,levels =g$ID)
+X$Median[X$Median==0]<-NA
+ug<-subset(X,X$Country=="Uganda")
+ml <-subset(X,X$Country=="Mali")
+ug %>% drop_na() %>% ggplot(aes(x =ID,y =Median,fill =Value))+geom_bar(stat ='identity')+facet_wrap(~Country)+theme1+scale_fill_manual(values=colors)+labs(title ="Number of members of group (Male and Female)",y ="Group_Members",x ="Groups")+theme(axis.text.x = element_blank())+scale_y_continuous(breaks =seq(0,100,5))
+ml %>% drop_na() %>% ggplot(aes(x =ID,y =Median,fill =Value))+geom_bar(stat ='identity')+facet_wrap(~Country)+theme1+scale_fill_manual(values=colors)+labs(title ="Number of members of group (Male and Female)",y ="Group_Members",x ="Groups")+theme(axis.text.x = element_blank())+scale_y_continuous(breaks =seq(0,100,5))
+table(X$Country)/2
+```
+
+<!-- 40	What is the gender of the respondent?	 -->
+<!-- ```{r,fig.height =6} -->
+<!-- data<-df[,grep("Country|Q_40",names(df)),with =F]#[,c(1:10)] -->
+<!-- data[data$Country =="-"]<-NA -->
+<!-- data[,value:=ifelse(Q_40==1,"Female",ifelse(Q_40==2,"Male",NA))] -->
+<!-- data$value<-factor(data$value,levels = c("Male","Female")) -->
+<!-- B<-data %>% drop_na() %>% group_by(Country,value) %>% dcast(Country) -->
+<!-- rbind(B,c("Respondents",colSums(B[,c(2:11)],na.rm = T))) %>% kable() -->
+<!-- per <- B%>%  adorn_percentages('col') -->
+<!-- per[1:6,2:11] <-per[1:6,2:3] %>% signif(digits=3) -->
+<!-- rbind(per,c("Percentage",c(1,1,1,1,1,1)))  %>% kable() -->
+
+<!-- ``` -->
+
+
+
